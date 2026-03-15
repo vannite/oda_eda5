@@ -777,35 +777,38 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              onClick={() => setShowPrepaymentInfo(false)}
               className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100]"
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-panel fixed inset-6 m-auto z-[100] h-fit space-y-6 rounded-[32px] p-8"
+              initial={{ scale: 0.9, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 24 }}
+              className="fixed inset-x-4 top-[20vh] z-[101] mx-auto w-auto max-w-[420px]"
             >
-              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto text-amber-500">
-                <Info size={32} />
-              </div>
-              <div className="text-center space-y-2">
-                <h2 className="text-xl font-bold">Важная информация</h2>
-                <p className="text-white/60 text-sm">Для подтверждения заказа необходимо внести предоплату в размере <span className="text-white font-bold">50% ({Math.ceil(total / 2)}р)</span>.</p>
-                <p className="text-white/60 text-sm">Оплата принимается <span className="text-white font-bold underline">только наличными</span>.</p>
-              </div>
-              <div className="space-y-3 pt-4">
-                <button 
-                  onClick={confirmCheckout}
-                  className="liquid-button w-full py-4 rounded-2xl font-bold"
-                >
-                  Понятно, заказать
-                </button>
-                <button 
-                  onClick={() => setShowPrepaymentInfo(false)}
-                  className="ghost-button w-full rounded-2xl py-3 text-white/70 text-xs font-bold uppercase tracking-widest"
-                >
-                  Отмена
-                </button>
+              <div className="glass-panel space-y-6 rounded-[32px] border border-white/12 bg-[#101524]/92 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,178,79,0.16)] text-[#ffb24f]">
+                  <Info size={32} />
+                </div>
+                <div className="text-center space-y-2">
+                  <h2 className="font-display text-2xl uppercase tracking-[0.08em] text-white">Важная информация</h2>
+                  <p className="text-sm text-white/60">Для подтверждения заказа необходимо внести предоплату в размере <span className="text-white font-bold">50% ({Math.ceil(total / 2)}р)</span>.</p>
+                  <p className="text-sm text-white/60">Оплата принимается <span className="text-white font-bold underline">только наличными</span>.</p>
+                </div>
+                <div className="space-y-3 pt-2">
+                  <button 
+                    onClick={confirmCheckout}
+                    className="liquid-button w-full py-4 rounded-2xl font-bold"
+                  >
+                    Понятно, заказать
+                  </button>
+                  <button 
+                    onClick={() => setShowPrepaymentInfo(false)}
+                    className="ghost-button w-full rounded-2xl py-3 text-white/70 text-xs font-bold uppercase tracking-widest"
+                  >
+                    Отмена
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
