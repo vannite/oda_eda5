@@ -120,6 +120,45 @@ export default function App() {
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + (item.selectedWeight.price * item.quantity), 0), [cart]);
 
+  const getApplicableDeliveryTier = (option?: DeliveryOption | null) => {
+    if (!option?.tiers?.length || totalItems === 0) return null;
+
+    return [...option.tiers]
+      .filter((tier) => {
+        const minOk = tier.minItems === undefined || totalItems >= tier.minItems;
+        const maxOk = tier.maxItems === undefined || totalItems <= tier.maxItems;
+        return minOk && maxOk;
+      })
+      .sort((a, b) => (b.minItems || 0) - (a.minItems || 0))[0] || null;
+  };
+
+  const getDeliveryCostForOption = (option?: DeliveryOption | null) => {
+    if (!option) return 0;
+    if (option.type === 'pickup') return 0;
+    if (totalItems === 0) return 0;
+
+    const tier = getApplicableDeliveryTier(option);
+    if (tier) {
+      return tier.perItem ? tier.price * totalItems : tier.price;
+    }
+    
+    const condition = option.condition?.toLowerCase() || '';
+    if (condition.includes('бесплатно от')) {
+      const thresholdMatch = condition.match(/\d+/);
+      if (thresholdMatch) {
+        const threshold = parseInt(thresholdMatch[0], 10);
+        if (subtotal >= threshold) return 0;
+      }
+    }
+
+    return option.price;
+  };
+
+  const getDeliveryConditionLabel = (option?: DeliveryOption | null) => {
+    const tier = getApplicableDeliveryTier(option);
+    return tier?.condition || option?.condition || '';
+  };
+
   // Discounts & Fees
   const promoDiscount = useMemo(() => {
     if (!appliedPromo || isLoyaltyApplied) return 0;
@@ -141,23 +180,7 @@ export default function App() {
     return Math.min(loyaltyPoints, maxDiscount);
   }, [isLoyaltyApplied, loyaltyPoints, subtotal, appliedPromo]);
 
-  const deliveryCost = useMemo(() => {
-    if (!selectedDelivery) return 0;
-    if (selectedDelivery.type === 'pickup') return 0;
-    if (totalItems === 0) return 0;
-    
-    // Parse condition: "Бесплатно от 1000р"
-    const condition = selectedDelivery.condition?.toLowerCase() || '';
-    if (condition.includes('бесплатно от')) {
-      const thresholdMatch = condition.match(/\d+/);
-      if (thresholdMatch) {
-        const threshold = parseInt(thresholdMatch[0]);
-        if (subtotal >= threshold) return 0;
-      }
-    }
-    
-    return selectedDelivery.price;
-  }, [selectedDelivery, totalItems, subtotal]);
+  const deliveryCost = useMemo(() => getDeliveryCostForOption(selectedDelivery), [selectedDelivery, totalItems, subtotal]);
 
   const priorityFee = isPriority ? 100 : 0;
 
@@ -403,10 +426,11 @@ export default function App() {
                               onClick={() => {
                                 setSelectedDeliveryId(option.id);
                                 if (option.name === 'Тверская, 22') {
-                                  navigator.clipboard.writeText('Тверская, 22');
+                                  if (navigator.clipboard?.writeText) {
+                                    void navigator.clipboard.writeText('Тверская, 22').catch(() => undefined);
+                                  }
                                   WebApp.HapticFeedback.notificationOccurred('success');
-                                  WebApp.showScanQrPopup({ text: 'Адрес скопирован!' });
-                                  setTimeout(() => WebApp.closeScanQrPopup(), 1000);
+                                  WebApp.showAlert('Адрес Тверская, 22 скопирован');
                                 }
                               }}
                               className={cn(
@@ -416,11 +440,11 @@ export default function App() {
                             >
                             <div className="flex justify-between w-full items-center">
                               {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
-                              <span className="text-xs font-bold">{option.price}р</span>
+                              <span className="text-xs font-bold">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
                             </div>
                             <span className="text-xs font-bold">{option.name}</span>
-                            {option.condition && (
-                              <span className="text-[9px] text-white/40 leading-tight">{option.condition}</span>
+                            {getDeliveryConditionLabel(option) && (
+                              <span className="text-[9px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
                             )}
                           </button>
                         ))}

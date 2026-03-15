@@ -22,6 +22,15 @@ export interface DeliveryOption {
   price: number;
   type: 'delivery' | 'pickup';
   condition?: string; // Условия из 3-го столбца
+  tiers?: DeliveryTier[];
+}
+
+export interface DeliveryTier {
+  price: number;
+  condition: string;
+  minItems?: number;
+  maxItems?: number;
+  perItem?: boolean;
 }
 
 export interface PromoCode {
