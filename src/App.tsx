@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { startTransition, useEffect, useMemo, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, ChevronRight, Minus, Plus, X, Truck, Store, Info, Star, Zap } from 'lucide-react';
@@ -50,7 +50,6 @@ export default function App() {
     WebApp.expand();
     
     const loadData = async () => {
-      console.log('Current User ID:', userId);
       const [productsData, deliveryData, promoData, loyaltyData] = await Promise.all([
         fetchProducts(),
         fetchDeliveryOptions(),
@@ -211,6 +210,12 @@ export default function App() {
     setShowPrepaymentInfo(true);
   };
 
+  const openProduct = (product: Product) => {
+    startTransition(() => {
+      setSelectedProduct(product);
+    });
+  };
+
   const confirmCheckout = () => {
     const itemsText = cart.map(item => 
       `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${item.selectedWeight.price * item.quantity}р`
@@ -230,7 +235,7 @@ export default function App() {
     
     message += `\nИтого к оплате: ${total}р\n(Предоплата 50%: ${Math.ceil(total / 2)}р)`;
     
-    const encodedMessage = encodeURIComponent(message);
+    const encodedMessage = encodeURIComponent(message.replace(/\n/g, '\r\n'));
     const ownerUsername = 'bd77797';
     const url = `https://t.me/${ownerUsername}?text=${encodedMessage}`;
     
@@ -320,7 +325,7 @@ export default function App() {
             key={product.id} 
             product={product} 
             onAdd={addToCart} 
-            onClick={() => setSelectedProduct(product)}
+            onClick={() => openProduct(product)}
           />
         ))}
       </main>
@@ -342,6 +347,10 @@ export default function App() {
           </div>
           <ChevronRight size={20} className="text-white/30" />
         </button>
+
+        <p className="mt-5 px-1 text-center text-[11px] leading-relaxed text-white/28">
+          Отказ от ответственности: сервис носит информационно-логистический характер. Указанные позиции отображаются для согласования ассортимента и организации доставки; оформление через приложение не является публичной офертой или розничной продажей товаров владельцем сервиса.
+        </p>
       </div>
 
       {/* Product Detail Modal */}
@@ -353,16 +362,16 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedProduct(null)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60]"
+              className="fixed inset-0 bg-black/78 z-[60]"
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.97, opacity: 0, y: 18 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.97, opacity: 0, y: 18 }}
               className="glass-panel fixed inset-4 m-auto z-[60] flex h-fit max-h-[80vh] flex-col overflow-hidden rounded-[32px]"
             >
               <div className="relative h-64">
-                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" decoding="async" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.72))]" />
                 <button 
                   onClick={() => setSelectedProduct(null)}
@@ -853,7 +862,7 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
       className="glass-panel min-w-0 overflow-hidden rounded-[26px] flex flex-col"
     >
       <div className="relative aspect-[1.06/1] overflow-hidden group cursor-pointer" onClick={onClick}>
-        <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
+        <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.76))]" />
         <div className="absolute bottom-2 left-2 glass-chip rounded-lg p-1.5">
           <Info size={14} className="text-white/60" />

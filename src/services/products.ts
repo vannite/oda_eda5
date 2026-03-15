@@ -14,10 +14,37 @@ const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
   { price: 0, condition: 'От 5 товаров', minItems: 5 }
 ];
 
+async function fetchSheetCsv(apiPath: string, fallbackUrl: string): Promise<string> {
+  const cacheBuster = `?_=${Date.now()}`;
+
+  try {
+    const response = await fetch(`${apiPath}${cacheBuster}`, {
+      cache: 'no-store',
+      headers: {
+        pragma: 'no-cache',
+      },
+    });
+
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch (error) {
+    console.warn(`API sheet fetch failed for ${apiPath}, falling back to Google Sheets`, error);
+  }
+
+  const fallbackResponse = await fetch(`${fallbackUrl}&_=${Date.now()}`, {
+    cache: 'no-store',
+    headers: {
+      pragma: 'no-cache',
+    },
+  });
+
+  return await fallbackResponse.text();
+}
+
 export async function fetchProducts(): Promise<Product[]> {
   try {
-    const response = await fetch(PRODUCTS_URL);
-    const csvData = await response.text();
+    const csvData = await fetchSheetCsv('/api/sheets/products', PRODUCTS_URL);
     const results = Papa.parse(csvData, { header: true });
     
     const products: Product[] = [];
@@ -54,8 +81,7 @@ export async function fetchProducts(): Promise<Product[]> {
 
 export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
   try {
-    const response = await fetch(DELIVERY_URL);
-    const csvData = await response.text();
+    const csvData = await fetchSheetCsv('/api/sheets/delivery', DELIVERY_URL);
     const results = Papa.parse(csvData, { header: false });
     const rows = results.data as string[][];
 
@@ -111,8 +137,7 @@ function parsePrice(value: string): number {
 
 export async function fetchPromoCodes(): Promise<PromoCode[]> {
   try {
-    const response = await fetch(PROMO_URL);
-    const csvData = await response.text();
+    const csvData = await fetchSheetCsv('/api/sheets/promo', PROMO_URL);
     // Parse without headers to access columns A and B directly
     const results = Papa.parse(csvData, { header: false });
     const rows = results.data as string[][];
@@ -137,8 +162,7 @@ export async function fetchPromoCodes(): Promise<PromoCode[]> {
 
 export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
   try {
-    const response = await fetch(LOYALTY_URL);
-    const csvData = await response.text();
+    const csvData = await fetchSheetCsv('/api/sheets/loyalty', LOYALTY_URL);
     const results = Papa.parse(csvData, { header: true });
     
     return results.data
