@@ -7,6 +7,13 @@ const DELIVERY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?
 const PROMO_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1982833599`;
 const LOYALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1519224442`;
 
+const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
+  { price: 100, condition: '0-1 товар', minItems: 0, maxItems: 1 },
+  { price: 75, condition: '2 товара', minItems: 2, maxItems: 2 },
+  { price: 50, condition: '3-4 товара', minItems: 3, maxItems: 4 },
+  { price: 0, condition: 'От 5 товаров', minItems: 5 }
+];
+
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const response = await fetch(PRODUCTS_URL);
@@ -61,25 +68,18 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
 
     const individualCell = dataRows.find((row) => row[0])?.[0] || '';
     const individualPrice = parsePrice(individualCell);
-    const officeTiers = dataRows
-      .filter((row) => row[1] && row[2])
-      .map((row) => buildDeliveryTier(row[1], row[2]))
-      .filter((tier): tier is DeliveryTier => tier !== null);
-
-    if (!individualPrice && officeTiers.length === 0) {
-      throw new Error('No data rows found in delivery sheet');
-    }
-
-    const officeCondition = officeTiers.map((tier) => `${tier.condition}: ${tier.price}р`).join(' | ');
+    const officeCondition = OFFICE_DELIVERY_TIERS
+      .map((tier) => `${tier.condition}: ${tier.price}р`)
+      .join(' | ');
 
     return [
       {
         id: 'delivery-office',
         name: 'Тверская, 22',
-        price: officeTiers[0]?.price || 0,
+        price: OFFICE_DELIVERY_TIERS[0].price,
         type: 'delivery',
         condition: officeCondition,
-        tiers: officeTiers
+        tiers: OFFICE_DELIVERY_TIERS
       },
       {
         id: 'delivery-indiv',
@@ -95,15 +95,10 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
       {
         id: 'default-office',
         name: 'Тверская, 22',
-        price: 75,
+        price: OFFICE_DELIVERY_TIERS[0].price,
         type: 'delivery',
-        condition: '1 товар: 75р | за единицу от 2 товаров: 50р | за единицу от 3 до 5 товаров: 25р | от 5 товаров: 0р',
-        tiers: [
-          { price: 75, condition: '1 товар', minItems: 1, maxItems: 1 },
-          { price: 50, condition: 'за единицу от 2 товаров', minItems: 2, perItem: true },
-          { price: 25, condition: 'за единицу от 3 до 5 товаров', minItems: 3, maxItems: 5, perItem: true },
-          { price: 0, condition: 'от 5 товаров', minItems: 5 }
-        ]
+        condition: '0-1 товар: 100р | 2 товара: 75р | 3-4 товара: 50р | от 5 товаров: 0р',
+        tiers: OFFICE_DELIVERY_TIERS
       },
       { id: 'default-indiv', name: 'Индивидуальная', price: 150, type: 'delivery', condition: 'от 500р' }
     ];
@@ -112,40 +107,6 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
 
 function parsePrice(value: string): number {
   return parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.') || '0');
-}
-
-function buildDeliveryTier(priceCell: string, conditionCell: string): DeliveryTier | null {
-  const price = parsePrice(priceCell);
-  const condition = conditionCell.trim();
-
-  if (!condition) return null;
-
-  const rangeMatch = condition.match(/от\s+(\d+)\s+до\s+(\d+)/i);
-  const singleItemMatch = condition.match(/^(\d+)\s+товар/i);
-  const minMatch = condition.match(/от\s+(\d+)/i);
-  const maxMatch = condition.match(/до\s+(\d+)/i);
-
-  let minItems: number | undefined;
-  let maxItems: number | undefined;
-
-  if (rangeMatch) {
-    minItems = parseInt(rangeMatch[1], 10);
-    maxItems = parseInt(rangeMatch[2], 10);
-  } else if (singleItemMatch) {
-    minItems = parseInt(singleItemMatch[1], 10);
-    maxItems = minItems;
-  } else {
-    if (minMatch) minItems = parseInt(minMatch[1], 10);
-    if (maxMatch) maxItems = parseInt(maxMatch[1], 10);
-  }
-
-  return {
-    price,
-    condition,
-    minItems,
-    maxItems,
-    perItem: /за\s+единицу/i.test(condition)
-  };
 }
 
 export async function fetchPromoCodes(): Promise<PromoCode[]> {
