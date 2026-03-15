@@ -365,12 +365,13 @@ export default function App() {
               className="fixed inset-0 bg-black/78 z-[60]"
             />
             <motion.div 
-              initial={{ scale: 0.97, opacity: 0, y: 18 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.97, opacity: 0, y: 18 }}
-              className="glass-panel fixed inset-4 m-auto z-[60] flex h-fit max-h-[80vh] flex-col overflow-hidden rounded-[32px]"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: "spring", damping: 26, stiffness: 220 }}
+              className="fixed bottom-0 inset-x-0 z-[61] mx-auto flex max-h-[88vh] max-w-[480px] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#0b1020]/96 shadow-[0_-20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
             >
-              <div className="relative h-64">
+              <div className="relative h-64 shrink-0">
                 <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" decoding="async" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.72))]" />
                 <button 
@@ -380,8 +381,12 @@ export default function App() {
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-4 overflow-y-auto">
-                <h2 className="font-display text-3xl uppercase leading-[0.92] tracking-[0.08em] text-white">{selectedProduct.name}</h2>
+              <div className="scrollbar-hide flex-1 overflow-y-auto p-5">
+                <div className="space-y-4">
+                  <div>
+                    <p className="section-kicker">Product detail</p>
+                    <h2 className="mt-2 font-display text-[1.8rem] uppercase leading-[0.92] tracking-[0.06em] text-white">{selectedProduct.name}</h2>
+                  </div>
                 <div className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
                   {selectedProduct.description || "Описание скоро появится..."}
                 </div>
@@ -393,6 +398,7 @@ export default function App() {
                       setSelectedProduct(null);
                     }} 
                   />
+                </div>
                 </div>
               </div>
             </motion.div>
@@ -480,7 +486,7 @@ export default function App() {
                               {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
                               <span className="font-display text-lg uppercase tracking-[0.06em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
                             </div>
-                            <span className="text-[1.05rem] font-semibold uppercase leading-[1.05] tracking-[0.04em] text-white break-words">{option.name}</span>
+                            <span className="max-w-full break-words text-[0.94rem] font-semibold uppercase leading-[1.08] tracking-[0.02em] text-white">{option.name}</span>
                             {getDeliveryConditionLabel(option) && (
                               <span className="text-[10px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
                             )}
