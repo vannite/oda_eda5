@@ -246,42 +246,67 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] text-white flex items-center justify-center">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full"
-        />
+      <div className="app-shell min-h-screen text-white">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="ambient-orb ambient-orb-a" />
+          <div className="ambient-orb ambient-orb-b" />
+          <div className="ambient-orb ambient-orb-c" />
+          <div className="ambient-grid" />
+        </div>
+        <div className="relative flex min-h-screen items-center justify-center px-6">
+          <div className="glass-panel flex w-full max-w-sm flex-col items-center gap-5 rounded-[32px] px-8 py-10 text-center">
+            <div className="floating-pill">
+              <Info size={14} />
+              Загрузка меню
+            </div>
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="h-12 w-12 rounded-full border-4 border-white/10 border-t-[#dbff4f]"
+            />
+            <div>
+              <p className="font-display text-3xl uppercase tracking-[0.16em] text-white">ODA EDA</p>
+              <p className="mt-2 text-sm text-white/58">Подготавливаем каталог и условия заказа.</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white font-sans selection:bg-white/20">
+    <div className="app-shell min-h-screen text-white font-sans selection:bg-white/20">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="ambient-orb ambient-orb-a" />
+        <div className="ambient-orb ambient-orb-b" />
+        <div className="ambient-orb ambient-orb-c" />
+        <div className="ambient-grid" />
+      </div>
+      <div className="relative mx-auto max-w-[480px] pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-40 px-6 py-4 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 flex justify-between items-center">
+      <header className="glass-panel sticky top-4 z-40 mx-4 mt-4 flex items-center justify-between rounded-[30px] px-5 py-4">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsProfileOpen(true)}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 relative"
+            className="glass-chip relative flex h-11 w-11 items-center justify-center rounded-full text-[#dbff4f]"
           >
             <Star size={20} fill={loyaltyPoints > 0 ? "currentColor" : "none"} />
             {loyaltyPoints > 0 && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0f172a]" />
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-[#7bffc7] border-2 border-[#090b14]" />
             )}
           </button>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold tracking-tight">ODA EDA</h1>
-            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Premium Food</p>
+            <h1 className="font-display text-[1.45rem] uppercase tracking-[0.14em] text-white">ODA EDA</h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.34em] text-white/40">Premium Food</p>
           </div>
         </div>
         <button 
           onClick={() => setIsCartOpen(true)}
-          className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+          className="glass-chip relative flex h-11 w-11 items-center justify-center rounded-full"
         >
           <ShoppingCart size={24} />
           {totalItems > 0 && (
-            <span className="absolute -top-1 -right-1 bg-emerald-500 text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#dbff4f] text-[10px] font-bold text-[#090b14] shadow-lg">
               {totalItems}
             </span>
           )}
@@ -289,7 +314,7 @@ export default function App() {
       </header>
 
       {/* Product List */}
-      <main className="px-4 py-6 grid grid-cols-2 gap-3 pb-12">
+      <main className="grid grid-cols-2 gap-2.5 px-4 py-6 pb-12">
         {products.map((product) => (
           <ProductCard 
             key={product.id} 
@@ -304,18 +329,18 @@ export default function App() {
       <div className="px-4 pb-32">
         <button 
           onClick={() => setIsTermsOpen(true)}
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between group hover:bg-white/10 transition-all"
+          className="glass-panel flex w-full items-center justify-between rounded-[28px] p-4 text-left transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(219,255,79,0.16)] text-[#dbff4f]">
               <Info size={20} />
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold">Условия доставки и оплаты</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">Важная информация</p>
+              <p className="font-display text-lg uppercase tracking-[0.1em] text-white">Delivery protocol</p>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-white/40">Важная информация</p>
             </div>
           </div>
-          <ChevronRight size={20} className="text-white/20 group-hover:text-white/60 transition-colors" />
+          <ChevronRight size={20} className="text-white/30" />
         </button>
       </div>
 
@@ -334,19 +359,20 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-4 m-auto h-fit max-h-[80vh] bg-[#1e293b] rounded-[32px] z-[60] overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+              className="glass-panel fixed inset-4 m-auto z-[60] flex h-fit max-h-[80vh] flex-col overflow-hidden rounded-[32px]"
             >
               <div className="relative h-64">
                 <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.72))]" />
                 <button 
                   onClick={() => setSelectedProduct(null)}
-                  className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-md rounded-full text-white"
+                  className="glass-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-white"
                 >
                   <X size={20} />
                 </button>
               </div>
               <div className="p-6 space-y-4 overflow-y-auto">
-                <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
+                <h2 className="font-display text-3xl uppercase leading-[0.92] tracking-[0.08em] text-white">{selectedProduct.name}</h2>
                 <div className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
                   {selectedProduct.description || "Описание скоро появится..."}
                 </div>
@@ -381,18 +407,21 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 inset-x-0 bg-[#1e293b] rounded-t-[32px] z-50 max-h-[90vh] overflow-hidden flex flex-col border-t border-white/10 shadow-2xl"
+              className="fixed bottom-0 inset-x-0 z-50 mx-auto flex max-h-[90vh] max-w-[480px] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#090b14]/92 shadow-2xl backdrop-blur-2xl"
             >
-              <div className="p-6 flex justify-between items-center border-b border-white/5">
-                <h2 className="text-xl font-bold">Оформление заказа</h2>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 bg-white/5 rounded-full">
+              <div className="soft-divider p-6 flex justify-between items-center">
+                <div>
+                  <p className="section-kicker">Checkout</p>
+                  <h2 className="font-display text-2xl uppercase tracking-[0.1em] text-white">Оформление заказа</h2>
+                </div>
+                <button onClick={() => setIsCartOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              <div className="scrollbar-hide flex-1 overflow-y-auto p-6 space-y-8">
                 {cart.length === 0 ? (
-                  <div className="text-center py-12 text-white/40">
+                  <div className="glass-panel rounded-[28px] px-6 py-12 text-center text-white/40">
                     <ShoppingCart size={48} className="mx-auto mb-4 opacity-20" />
                     <p>Ваша корзина пуста</p>
                   </div>
@@ -401,16 +430,16 @@ export default function App() {
                     {/* Cart Items */}
                     <div className="space-y-4">
                       {cart.map((item) => (
-                        <div key={`${item.id}-${item.selectedWeight.weight}`} className="flex items-center gap-4">
+                        <div key={`${item.id}-${item.selectedWeight.weight}`} className="glass-panel flex items-center gap-4 rounded-[24px] px-3 py-3">
                           <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover bg-white/5" referrerPolicy="no-referrer" />
                           <div className="flex-1">
                             <h3 className="font-medium text-sm leading-tight">{item.name}</h3>
                             <p className="text-xs text-white/40 mt-1">{item.selectedWeight.weight} • {item.selectedWeight.price}р</p>
                           </div>
-                          <div className="flex items-center gap-3 bg-white/5 rounded-full p-1">
-                            <button onClick={() => removeFromCart(item.id, item.selectedWeight.weight)} className="w-8 h-8 flex items-center justify-center rounded-full"><Minus size={14} /></button>
+                          <div className="flex items-center gap-3 rounded-full bg-white/5 p-1">
+                            <button onClick={() => removeFromCart(item.id, item.selectedWeight.weight)} className="glass-chip flex h-8 w-8 items-center justify-center rounded-full"><Minus size={14} /></button>
                             <span className="text-sm font-medium">{item.quantity}</span>
-                            <button onClick={() => addToCart(item, item.selectedWeight)} className="w-8 h-8 flex items-center justify-center rounded-full"><Plus size={14} /></button>
+                            <button onClick={() => addToCart(item, item.selectedWeight)} className="glass-chip flex h-8 w-8 items-center justify-center rounded-full"><Plus size={14} /></button>
                           </div>
                         </div>
                       ))}
@@ -434,15 +463,15 @@ export default function App() {
                                 }
                               }}
                               className={cn(
-                                "flex flex-col items-start gap-2 p-4 rounded-2xl border transition-all relative overflow-hidden",
-                                selectedDeliveryId === option.id ? "bg-emerald-500/10 border-emerald-500" : "bg-white/5 border-white/10"
+                                "glass-panel relative flex min-h-[152px] flex-col items-start justify-between gap-2 overflow-hidden rounded-[24px] p-4 text-left transition-all",
+                                selectedDeliveryId === option.id ? "ring-1 ring-[#dbff4f] shadow-[0_0_40px_rgba(219,255,79,0.18)]" : ""
                               )}
                             >
                             <div className="flex justify-between w-full items-center">
                               {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
-                              <span className="text-xs font-bold">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
+                              <span className="font-display text-xl uppercase tracking-[0.08em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
                             </div>
-                            <span className="text-xs font-bold">{option.name}</span>
+                            <span className="font-display text-lg uppercase tracking-[0.08em] text-white">{option.name}</span>
                             {getDeliveryConditionLabel(option) && (
                               <span className="text-[9px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
                             )}
@@ -466,9 +495,9 @@ export default function App() {
                           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 disabled:opacity-50"
                         />
                         {appliedPromo ? (
-                          <button onClick={() => {setAppliedPromo(null); setPromoInput('');}} className="bg-red-500/20 text-red-400 px-4 rounded-xl"><X size={18} /></button>
+                          <button onClick={() => {setAppliedPromo(null); setPromoInput('');}} className="glass-chip rounded-xl px-4 text-red-300"><X size={18} /></button>
                         ) : (
-                          <button onClick={handleApplyPromo} className="bg-emerald-500 text-white px-6 rounded-xl font-bold text-sm">Применить</button>
+                          <button onClick={handleApplyPromo} className="liquid-button rounded-xl px-6 text-sm font-bold">Применить</button>
                         )}
                       </div>
 
@@ -482,8 +511,8 @@ export default function App() {
                         }}
                         disabled={loyaltyPoints === 0}
                         className={cn(
-                          "w-full p-4 rounded-2xl border flex justify-between items-center transition-all",
-                          isLoyaltyApplied ? "bg-emerald-500/10 border-emerald-500" : "bg-white/5 border-white/10",
+                          "glass-panel w-full p-4 rounded-[24px] flex justify-between items-center transition-all",
+                          isLoyaltyApplied ? "ring-1 ring-[#7bffc7]" : "",
                           loyaltyPoints === 0 && "opacity-50 grayscale"
                         )}
                       >
@@ -514,7 +543,7 @@ export default function App() {
                             onClick={() => {setBargainPercent(p); setCustomBargain('');}}
                             className={cn(
                               "py-3 rounded-xl border text-xs font-bold transition-all",
-                              bargainPercent === p ? "bg-emerald-500 border-emerald-500" : "bg-white/5 border-white/10"
+                              bargainPercent === p ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f]" : "bg-white/5 border-white/10"
                             )}
                           >
                             {p}%
@@ -539,8 +568,8 @@ export default function App() {
                     <button 
                       onClick={() => setIsPriority(!isPriority)}
                       className={cn(
-                        "w-full p-4 rounded-2xl border flex justify-between items-center transition-all",
-                        isPriority ? "bg-amber-500/10 border-amber-500" : "bg-white/5 border-white/10"
+                        "glass-panel w-full p-4 rounded-[24px] border flex justify-between items-center transition-all",
+                        isPriority ? "ring-1 ring-[#ffb24f]" : ""
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -557,7 +586,7 @@ export default function App() {
               </div>
 
               {cart.length > 0 && (
-                <div className="p-6 bg-white/5 border-t border-white/5 space-y-4">
+                <div className="soft-divider p-6 space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm text-white/60">
                       <span>Сумма</span>
@@ -598,7 +627,7 @@ export default function App() {
                   </div>
                   <button 
                     onClick={handleCheckout}
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                    className="liquid-button flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold"
                   >
                     Оформить заказ
                     <ChevronRight size={20} />
@@ -625,17 +654,17 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="fixed bottom-0 inset-x-0 bg-[#1e293b] rounded-t-[32px] z-[80] p-8 border-t border-white/10 shadow-2xl space-y-6"
+              className="glass-panel fixed bottom-0 inset-x-0 z-[80] mx-auto space-y-6 rounded-t-[32px] p-8 max-w-[480px]"
             >
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Доставка и оплата</h2>
-                <button onClick={() => setIsTermsOpen(false)} className="p-2 bg-white/5 rounded-full"><X size={20} /></button>
+                <h2 className="font-display text-[2rem] uppercase tracking-[0.1em] text-white">Доставка и оплата</h2>
+                <button onClick={() => setIsTermsOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full"><X size={20} /></button>
               </div>
 
               <div className="space-y-6">
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Доставка на Тверскую, 22</h3>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                  <div className="glass-panel rounded-[24px] p-4 space-y-2">
                     <p className="text-sm leading-relaxed text-white/80">
                       Доставка осуществляется с <span className="text-white font-bold">Пн по Пт</span> через неделю после заказа.
                     </p>
@@ -647,7 +676,7 @@ export default function App() {
 
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400">Индивидуальная доставка</h3>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="glass-panel rounded-[24px] p-4">
                     <p className="text-sm leading-relaxed text-white/80">
                       Приоритетные заказы с индивидуальной доставкой обсуждаются отдельно в личном чате.
                     </p>
@@ -656,7 +685,7 @@ export default function App() {
 
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Оплата</h3>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="glass-panel rounded-[24px] p-4">
                     <p className="text-sm leading-relaxed text-white/80">
                       Предоплата <span className="text-white font-bold">50%</span> для подтверждения заказа. Оплата принимается <span className="text-white font-bold underline">только наличными</span>.
                     </p>
@@ -666,7 +695,7 @@ export default function App() {
 
               <button 
                 onClick={() => setIsTermsOpen(false)}
-                className="w-full bg-white text-[#0f172a] py-4 rounded-2xl font-bold mt-4"
+                className="liquid-button w-full py-4 rounded-2xl font-bold mt-4"
               >
                 Понятно
               </button>
@@ -690,19 +719,19 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="fixed bottom-0 inset-x-0 bg-[#1e293b] rounded-t-[32px] z-[70] p-8 border-t border-white/10 shadow-2xl space-y-8"
+              className="glass-panel fixed bottom-0 inset-x-0 z-[70] mx-auto max-w-[480px] space-y-8 rounded-t-[32px] p-8"
             >
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Профиль лояльности</h2>
-                <button onClick={() => setIsProfileOpen(false)} className="p-2 bg-white/5 rounded-full"><X size={20} /></button>
+                <h2 className="font-display text-[2rem] uppercase tracking-[0.1em] text-white">Профиль лояльности</h2>
+                <button onClick={() => setIsProfileOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full"><X size={20} /></button>
               </div>
 
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 text-center space-y-4">
-                <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/40">
+              <div className="glass-panel rounded-3xl p-8 text-center space-y-4">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle,rgba(219,255,79,0.32),rgba(219,255,79,0.08)_55%,transparent_70%)] text-[#dbff4f]">
                   <Star size={40} fill="white" className="text-white" />
                 </div>
                 <div>
-                  <p className="text-4xl font-black text-emerald-400">{loyaltyPoints}</p>
+                  <p className="font-display text-5xl uppercase tracking-[0.08em] text-white">{loyaltyPoints}</p>
                   <p className="text-xs font-bold uppercase tracking-widest text-white/40">Доступных баллов</p>
                 </div>
               </div>
@@ -716,16 +745,16 @@ export default function App() {
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">Как это работает?</h3>
                 <div className="grid gap-3">
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex gap-4 items-center">
-                    <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 font-bold">3%</div>
+                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">3%</div>
                     <p className="text-xs text-white/60">Получайте 3% баллами с каждой подтвержденной покупки</p>
                   </div>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex gap-4 items-center">
-                    <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 font-bold">15%</div>
+                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">15%</div>
                     <p className="text-xs text-white/60">Оплачивайте до 15% от суммы заказа накопленными баллами</p>
                   </div>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex gap-4 items-center">
-                    <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400 font-bold">3м</div>
+                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(255,178,79,0.14)] text-[#ffb24f] font-bold">3м</div>
                     <p className="text-xs text-white/60">Баллы действительны в течение 3 месяцев с момента начисления</p>
                   </div>
                 </div>
@@ -733,7 +762,7 @@ export default function App() {
 
               <button 
                 onClick={() => setIsProfileOpen(false)}
-                className="w-full bg-white text-[#0f172a] py-4 rounded-2xl font-bold"
+                className="liquid-button w-full py-4 rounded-2xl font-bold"
               >
                 Понятно
               </button>
@@ -754,7 +783,7 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-6 m-auto h-fit bg-[#1e293b] rounded-[32px] z-[100] p-8 border border-white/10 shadow-2xl space-y-6"
+              className="glass-panel fixed inset-6 m-auto z-[100] h-fit space-y-6 rounded-[32px] p-8"
             >
               <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto text-amber-500">
                 <Info size={32} />
@@ -767,13 +796,13 @@ export default function App() {
               <div className="space-y-3 pt-4">
                 <button 
                   onClick={confirmCheckout}
-                  className="w-full bg-emerald-500 py-4 rounded-2xl font-bold text-white shadow-lg shadow-emerald-500/20"
+                  className="liquid-button w-full py-4 rounded-2xl font-bold"
                 >
                   Понятно, заказать
                 </button>
                 <button 
                   onClick={() => setShowPrepaymentInfo(false)}
-                  className="w-full text-white/40 text-xs font-bold uppercase tracking-widest"
+                  className="ghost-button w-full rounded-2xl py-3 text-white/70 text-xs font-bold uppercase tracking-widest"
                 >
                   Отмена
                 </button>
@@ -785,19 +814,20 @@ export default function App() {
 
       {/* Quick Summary Bar */}
       {totalItems > 0 && !isCartOpen && (
-        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-6 inset-x-4 z-40">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl flex justify-between items-center shadow-2xl">
+        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-4 left-0 right-0 z-40 mx-auto max-w-[480px] px-4">
+          <button onClick={() => setIsCartOpen(true)} className="glass-panel flex w-full items-center justify-between rounded-[28px] p-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="bg-emerald-500 p-2 rounded-xl"><ShoppingCart size={20} /></div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(219,255,79,0.16)] text-[#dbff4f]"><ShoppingCart size={20} /></div>
               <div className="text-left">
-                <p className="text-xs text-white/60 font-medium">{totalItems} поз.</p>
-                <p className="font-bold">{total}р</p>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/44">{totalItems} поз.</p>
+                <p className="font-display text-2xl uppercase tracking-[0.08em] text-white">{total}р</p>
               </div>
             </div>
-            <span className="text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/10">Корзина</span>
+            <span className="glass-chip rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">Корзина</span>
           </button>
         </motion.div>
       )}
+      </div>
     </div>
   );
 }
@@ -811,28 +841,28 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden flex flex-col"
+      className="glass-panel min-w-0 overflow-hidden rounded-[28px] flex flex-col"
     >
       <div className="relative aspect-square overflow-hidden group cursor-pointer" onClick={onClick}>
         <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent opacity-60" />
-        <div className="absolute bottom-2 left-2 p-1.5 bg-black/40 backdrop-blur-md rounded-lg">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.76))]" />
+        <div className="absolute bottom-2 left-2 glass-chip rounded-lg p-1.5">
           <Info size={14} className="text-white/60" />
         </div>
       </div>
 
-      <div className="p-3 space-y-2 flex-1 flex flex-col">
-        <h3 className="text-sm font-bold leading-tight line-clamp-2 h-10 cursor-pointer" onClick={onClick}>{product.name}</h3>
+      <div className="p-3 space-y-3 flex-1 flex flex-col">
+        <h3 className="font-display text-lg uppercase leading-[0.92] tracking-[0.06em] line-clamp-2 min-h-[3.2rem] cursor-pointer text-white" onClick={onClick}>{product.name}</h3>
 
         {product.weights.length > 1 && (
-          <div className="flex flex-wrap gap-1 p-0.5 bg-white/5 rounded-lg self-start">
+          <div className="flex flex-wrap gap-1.5 self-start">
             {product.weights.map((w, idx) => (
               <button
                 key={w.weight}
                 onClick={(e) => { e.stopPropagation(); setSelectedWeightIdx(idx); }}
                 className={cn(
-                  "px-2 py-1 rounded-md text-[10px] font-bold transition-all",
-                  selectedWeightIdx === idx ? "bg-white text-[#0f172a]" : "text-white/60"
+                  "rounded-full border px-3 py-1.5 text-[10px] font-bold transition-all",
+                  selectedWeightIdx === idx ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f]" : "border-white/10 bg-white/6 text-white/60"
                 )}
               >
                 {w.weight}
@@ -841,14 +871,14 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
           </div>
         )}
 
-        <div className="pt-1 mt-auto flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Цена</span>
-            <span className="text-lg font-black text-emerald-400">{selectedWeight.price}р</span>
+        <div className="pt-1 mt-auto flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-[10px] text-white/40 font-medium uppercase tracking-[0.18em]">Цена</span>
+            <span className="font-display text-2xl uppercase tracking-[0.04em] text-[#dbff4f]">{selectedWeight.price}р</span>
           </div>
           <button 
             onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
-            className="bg-white text-[#0f172a] p-2 rounded-xl hover:bg-emerald-400 transition-all active:scale-90"
+            className="liquid-button h-11 w-11 rounded-2xl p-0 active:scale-90"
           >
             <Plus size={18} />
           </button>
@@ -870,8 +900,8 @@ const ProductWeightSelector: React.FC<{ product: Product; onAdd: (p: Product, w:
             key={w.weight}
             onClick={() => setSelectedIdx(idx)}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold border transition-all",
-              selectedIdx === idx ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white/5 border-white/10 text-white/60"
+              "px-4 py-2 rounded-full text-xs font-bold border transition-all",
+              selectedIdx === idx ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f]" : "bg-white/5 border-white/10 text-white/60"
             )}
           >
             {w.weight} — {w.price}р
@@ -880,7 +910,7 @@ const ProductWeightSelector: React.FC<{ product: Product; onAdd: (p: Product, w:
       </div>
       <button 
         onClick={() => onAdd(product, weight)}
-        className="w-full bg-white text-[#0f172a] py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+        className="liquid-button w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
       >
         Добавить в корзину — {weight.price}р
       </button>
