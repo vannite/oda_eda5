@@ -453,7 +453,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="grid grid-cols-2 gap-3">
+          <section className="grid grid-cols-2 gap-2.5">
             {products.map((product, index) => (
               <ProductCard
                 key={product.id}
@@ -989,7 +989,7 @@ const ProductCard: React.FC<{
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.18 }}
       transition={{ delay: Math.min(index * 0.04, 0.16), duration: 0.45 }}
-      className="glass-panel group overflow-hidden rounded-[28px]"
+      className="glass-panel group overflow-hidden rounded-[28px] min-w-0"
     >
       <button onClick={onOpen} className="relative block aspect-[0.82] w-full overflow-hidden text-left">
         <img
@@ -999,14 +999,14 @@ const ProductCard: React.FC<{
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.76))]" />
-        <div className="absolute inset-x-0 bottom-0 p-3">
+        <div className="absolute inset-x-0 bottom-0 p-2.5">
           <div className="glass-panel rounded-[22px] px-3 py-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="line-clamp-2 text-sm font-semibold text-white">{product.name}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/42">Tap for detail</p>
+                <p className="line-clamp-2 text-sm font-semibold leading-tight text-white">{product.name}</p>
+                <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/42">Tap for detail</p>
               </div>
-              <div className="floating-pill shrink-0 text-[10px]">
+              <div className="floating-pill shrink-0 px-2.5 py-1 text-[9px]">
                 <Sparkles size={12} />
                 {product.weights.length} веса
               </div>
@@ -1017,13 +1017,13 @@ const ProductCard: React.FC<{
 
       <div className="space-y-3 px-3 pb-3 pt-3">
         {product.weights.length > 1 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {product.weights.map((weight, idx) => (
               <button
                 key={weight.weight}
                 onClick={() => setSelectedWeightIdx(idx)}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-[11px] font-semibold transition',
+                  'rounded-full border px-3 py-1.5 text-[11px] font-semibold transition min-w-0',
                   idx === selectedWeightIdx
                     ? 'border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f]'
                     : 'border-white/10 bg-white/6 text-white/62',
@@ -1035,12 +1035,15 @@ const ProductCard: React.FC<{
           </div>
         )}
 
-        <div className="flex items-end justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/36">Цена</p>
-            <p className="font-display text-2xl uppercase tracking-[0.06em] text-[#dbff4f]">{selectedWeight.price}р</p>
+            <p className="font-display text-[2rem] leading-none uppercase tracking-[0.04em] text-[#dbff4f]">{selectedWeight.price}р</p>
           </div>
-          <button onClick={() => onAdd(product, selectedWeight)} className="liquid-button h-11 rounded-2xl px-4 text-sm">
+          <button
+            onClick={() => onAdd(product, selectedWeight)}
+            className="liquid-button flex h-11 w-full min-w-0 items-center justify-center rounded-2xl px-3 text-sm font-semibold leading-none"
+          >
             <Plus size={16} />
             В корзину
           </button>
