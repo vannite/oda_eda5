@@ -26,7 +26,14 @@ async function fetchSheetCsv(apiPath: string, fallbackUrl: string): Promise<stri
     });
 
     if (response.ok) {
-      return await response.text();
+      const contentType = response.headers.get('content-type') || '';
+      const text = await response.text();
+
+      if (isValidCsvPayload(text, contentType)) {
+        return text;
+      }
+
+      console.warn(`API sheet fetch for ${apiPath} returned non-CSV payload, falling back to Google Sheets`);
     }
   } catch (error) {
     console.warn(`API sheet fetch failed for ${apiPath}, falling back to Google Sheets`, error);
@@ -40,6 +47,17 @@ async function fetchSheetCsv(apiPath: string, fallbackUrl: string): Promise<stri
   });
 
   return await fallbackResponse.text();
+}
+
+function isValidCsvPayload(payload: string, contentType: string): boolean {
+  const normalized = payload.trim().toLowerCase();
+
+  if (!normalized) return false;
+  if (contentType.includes('text/html')) return false;
+  if (normalized.startsWith('<!doctype') || normalized.startsWith('<html')) return false;
+  if (normalized.includes('<body') || normalized.includes('<head')) return false;
+
+  return payload.includes(',') || payload.includes(';') || payload.includes('\n');
 }
 
 export async function fetchProducts(): Promise<Product[]> {
