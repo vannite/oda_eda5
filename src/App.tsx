@@ -282,9 +282,9 @@ export default function App() {
         <div className="ambient-orb ambient-orb-c" />
         <div className="ambient-grid" />
       </div>
-      <div className="relative mx-auto max-w-[480px] pb-32">
+      <div className="relative mx-auto max-w-[480px] pb-28">
       {/* Header */}
-      <header className="glass-panel sticky top-4 z-40 mx-4 mt-4 flex items-center justify-between rounded-[30px] px-5 py-4">
+      <header className="glass-panel sticky top-3 z-40 mx-4 mt-3 flex items-center justify-between rounded-[28px] px-4 py-3">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsProfileOpen(true)}
@@ -296,8 +296,8 @@ export default function App() {
             )}
           </button>
           <div className="flex flex-col">
-            <h1 className="font-display text-[1.45rem] uppercase tracking-[0.14em] text-white">ODA EDA</h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.34em] text-white/40">Premium Food</p>
+            <h1 className="font-display text-[1.25rem] uppercase tracking-[0.12em] text-white">ODA EDA</h1>
+            <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-white/40">Premium Food</p>
           </div>
         </div>
         <button 
@@ -314,7 +314,7 @@ export default function App() {
       </header>
 
       {/* Product List */}
-      <main className="grid grid-cols-2 gap-2.5 px-4 py-6 pb-12">
+      <main className="grid grid-cols-2 gap-2 px-4 py-4 pb-10">
         {products.map((product) => (
           <ProductCard 
             key={product.id} 
@@ -409,17 +409,17 @@ export default function App() {
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="fixed bottom-0 inset-x-0 z-50 mx-auto flex max-h-[90vh] max-w-[480px] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#090b14]/92 shadow-2xl backdrop-blur-2xl"
             >
-              <div className="soft-divider p-6 flex justify-between items-center">
-                <div>
+              <div className="soft-divider flex items-start justify-between gap-4 p-5">
+                <div className="min-w-0 flex-1">
                   <p className="section-kicker">Checkout</p>
-                  <h2 className="font-display text-2xl uppercase tracking-[0.1em] text-white">Оформление заказа</h2>
+                  <h2 className="font-display text-[1.55rem] uppercase leading-[0.95] tracking-[0.07em] text-white">Оформление заказа</h2>
                 </div>
-                <button onClick={() => setIsCartOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full">
+                <button onClick={() => setIsCartOpen(false)} className="glass-chip flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="scrollbar-hide flex-1 overflow-y-auto p-6 space-y-8">
+              <div className="scrollbar-hide flex-1 overflow-y-auto px-5 pb-5 space-y-6">
                 {cart.length === 0 ? (
                   <div className="glass-panel rounded-[28px] px-6 py-12 text-center text-white/40">
                     <ShoppingCart size={48} className="mx-auto mb-4 opacity-20" />
@@ -430,15 +430,15 @@ export default function App() {
                     {/* Cart Items */}
                     <div className="space-y-4">
                       {cart.map((item) => (
-                        <div key={`${item.id}-${item.selectedWeight.weight}`} className="glass-panel flex items-center gap-4 rounded-[24px] px-3 py-3">
-                          <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover bg-white/5" referrerPolicy="no-referrer" />
-                          <div className="flex-1">
-                            <h3 className="font-medium text-sm leading-tight">{item.name}</h3>
+                        <div key={`${item.id}-${item.selectedWeight.weight}`} className="glass-panel flex items-center gap-3 rounded-[24px] px-3 py-3">
+                          <img src={item.image} alt={item.name} className="h-14 w-14 rounded-xl object-cover bg-white/5" referrerPolicy="no-referrer" />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-sm font-medium leading-tight">{item.name}</h3>
                             <p className="text-xs text-white/40 mt-1">{item.selectedWeight.weight} • {item.selectedWeight.price}р</p>
                           </div>
-                          <div className="flex items-center gap-3 rounded-full bg-white/5 p-1">
+                          <div className="flex shrink-0 items-center gap-2 rounded-full bg-white/5 p-1">
                             <button onClick={() => removeFromCart(item.id, item.selectedWeight.weight)} className="glass-chip flex h-8 w-8 items-center justify-center rounded-full"><Minus size={14} /></button>
-                            <span className="text-sm font-medium">{item.quantity}</span>
+                            <span className="min-w-5 text-center text-sm font-medium">{item.quantity}</span>
                             <button onClick={() => addToCart(item, item.selectedWeight)} className="glass-chip flex h-8 w-8 items-center justify-center rounded-full"><Plus size={14} /></button>
                           </div>
                         </div>
@@ -448,7 +448,7 @@ export default function App() {
                     {/* Delivery Options */}
                     <div className="space-y-4">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Доставка</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2.5">
                         {deliveryOptions.map((option) => (
                             <button 
                               key={option.id}
@@ -463,17 +463,17 @@ export default function App() {
                                 }
                               }}
                               className={cn(
-                                "glass-panel relative flex min-h-[152px] flex-col items-start justify-between gap-2 overflow-hidden rounded-[24px] p-4 text-left transition-all",
+                                "glass-panel relative flex min-h-[138px] flex-col items-start justify-between gap-2 overflow-hidden rounded-[24px] p-4 text-left transition-all",
                                 selectedDeliveryId === option.id ? "ring-1 ring-[#dbff4f] shadow-[0_0_40px_rgba(219,255,79,0.18)]" : ""
                               )}
                             >
                             <div className="flex justify-between w-full items-center">
                               {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
-                              <span className="font-display text-xl uppercase tracking-[0.08em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
+                              <span className="font-display text-lg uppercase tracking-[0.06em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
                             </div>
-                            <span className="font-display text-lg uppercase tracking-[0.08em] text-white">{option.name}</span>
+                            <span className="text-[1.05rem] font-semibold uppercase leading-[1.05] tracking-[0.04em] text-white break-words">{option.name}</span>
                             {getDeliveryConditionLabel(option) && (
-                              <span className="text-[9px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
+                              <span className="text-[10px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
                             )}
                           </button>
                         ))}
@@ -586,43 +586,43 @@ export default function App() {
               </div>
 
               {cart.length > 0 && (
-                <div className="soft-divider p-6 space-y-4">
+                <div className="soft-divider space-y-4 p-5">
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-white/60">
+                    <div className="flex justify-between gap-3 text-sm text-white/60">
                       <span>Сумма</span>
-                      <span>{subtotal}р</span>
+                      <span className="shrink-0">{subtotal}р</span>
                     </div>
                     {promoDiscount > 0 && (
-                      <div className="flex justify-between text-sm text-emerald-400">
-                        <span>Промокод ({appliedPromo?.code})</span>
-                        <span>-{promoDiscount}р</span>
+                      <div className="flex justify-between gap-3 text-sm text-emerald-400">
+                        <span className="min-w-0">Промокод ({appliedPromo?.code})</span>
+                        <span className="shrink-0">-{promoDiscount}р</span>
                       </div>
                     )}
                     {bargainDiscount > 0 && (
-                      <div className="flex justify-between text-sm text-emerald-400">
-                        <span>Торг ({bargainPercent || customBargain}%)</span>
-                        <span>-{bargainDiscount}р</span>
+                      <div className="flex justify-between gap-3 text-sm text-emerald-400">
+                        <span className="min-w-0">Торг ({bargainPercent || customBargain}%)</span>
+                        <span className="shrink-0">-{bargainDiscount}р</span>
                       </div>
                     )}
                     {loyaltyDiscount > 0 && (
-                      <div className="flex justify-between text-sm text-emerald-400">
+                      <div className="flex justify-between gap-3 text-sm text-emerald-400">
                         <span>Баллы</span>
-                        <span>-{loyaltyDiscount}р</span>
+                        <span className="shrink-0">-{loyaltyDiscount}р</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm text-white/60">
-                      <span>Доставка ({selectedDelivery?.name})</span>
-                      <span>{deliveryCost}р</span>
+                    <div className="flex justify-between gap-3 text-sm text-white/60">
+                      <span className="min-w-0 truncate">Доставка ({selectedDelivery?.name})</span>
+                      <span className="shrink-0">{deliveryCost}р</span>
                     </div>
                     {isPriority && (
-                      <div className="flex justify-between text-sm text-amber-400">
+                      <div className="flex justify-between gap-3 text-sm text-amber-400">
                         <span>Приоритет</span>
-                        <span>+100р</span>
+                        <span className="shrink-0">+100р</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/5">
+                    <div className="flex justify-between gap-3 pt-2 text-lg font-bold border-t border-white/5">
                       <span>Итого</span>
-                      <span>{total}р</span>
+                      <span className="shrink-0">{total}р</span>
                     </div>
                   </div>
                   <button 
@@ -654,51 +654,56 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="glass-panel fixed bottom-0 inset-x-0 z-[80] mx-auto space-y-6 rounded-t-[32px] p-8 max-w-[480px]"
+              className="fixed inset-x-4 top-[12vh] z-[80] mx-auto w-auto max-w-[420px]"
             >
-              <div className="flex justify-between items-center">
-                <h2 className="font-display text-[2rem] uppercase tracking-[0.1em] text-white">Доставка и оплата</h2>
-                <button onClick={() => setIsTermsOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full"><X size={20} /></button>
+              <div className="glass-panel max-h-[76vh] space-y-5 overflow-y-auto rounded-[32px] border border-white/12 bg-[#101524]/94 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="section-kicker">Delivery info</p>
+                    <h2 className="font-display text-[1.6rem] uppercase leading-[0.95] tracking-[0.08em] text-white">Доставка и оплата</h2>
+                  </div>
+                  <button onClick={() => setIsTermsOpen(false)} className="glass-chip flex h-10 w-10 shrink-0 items-center justify-center rounded-full"><X size={20} /></button>
+                </div>
+
+                <div className="space-y-4">
+                  <section className="space-y-2">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-400">Доставка на Тверскую, 22</h3>
+                    <div className="glass-panel rounded-[22px] p-4 space-y-2">
+                      <p className="text-sm leading-relaxed text-white/80">
+                        Доставка осуществляется с <span className="text-white font-bold">Пн по Пт</span> через неделю после заказа.
+                      </p>
+                      <p className="text-xs text-white/40 italic">
+                        Пример: заказали во вторник — забираете на следующей неделе в Пн-Вт.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-400">Индивидуальная доставка</h3>
+                    <div className="glass-panel rounded-[22px] p-4">
+                      <p className="text-sm leading-relaxed text-white/80">
+                        Приоритетные заказы с индивидуальной доставкой обсуждаются отдельно в личном чате.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">Оплата</h3>
+                    <div className="glass-panel rounded-[22px] p-4">
+                      <p className="text-sm leading-relaxed text-white/80">
+                        Предоплата <span className="text-white font-bold">50%</span> для подтверждения заказа. Оплата принимается <span className="text-white font-bold underline">только наличными</span>.
+                      </p>
+                    </div>
+                  </section>
+                </div>
+
+                <button 
+                  onClick={() => setIsTermsOpen(false)}
+                  className="liquid-button w-full py-4 rounded-2xl font-bold"
+                >
+                  Понятно
+                </button>
               </div>
-
-              <div className="space-y-6">
-                <section className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Доставка на Тверскую, 22</h3>
-                  <div className="glass-panel rounded-[24px] p-4 space-y-2">
-                    <p className="text-sm leading-relaxed text-white/80">
-                      Доставка осуществляется с <span className="text-white font-bold">Пн по Пт</span> через неделю после заказа.
-                    </p>
-                    <p className="text-xs text-white/40 italic">
-                      Пример: заказали во вторник — забираете на следующей неделе в Пн-Вт.
-                    </p>
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400">Индивидуальная доставка</h3>
-                  <div className="glass-panel rounded-[24px] p-4">
-                    <p className="text-sm leading-relaxed text-white/80">
-                      Приоритетные заказы с индивидуальной доставкой обсуждаются отдельно в личном чате.
-                    </p>
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Оплата</h3>
-                  <div className="glass-panel rounded-[24px] p-4">
-                    <p className="text-sm leading-relaxed text-white/80">
-                      Предоплата <span className="text-white font-bold">50%</span> для подтверждения заказа. Оплата принимается <span className="text-white font-bold underline">только наличными</span>.
-                    </p>
-                  </div>
-                </section>
-              </div>
-
-              <button 
-                onClick={() => setIsTermsOpen(false)}
-                className="liquid-button w-full py-4 rounded-2xl font-bold mt-4"
-              >
-                Понятно
-              </button>
             </motion.div>
           </>
         )}
@@ -719,10 +724,10 @@ export default function App() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              className="glass-panel fixed bottom-0 inset-x-0 z-[70] mx-auto max-w-[480px] space-y-8 rounded-t-[32px] p-8"
+              className="glass-panel fixed bottom-0 inset-x-0 z-[70] mx-auto max-w-[480px] space-y-6 rounded-t-[32px] p-6"
             >
               <div className="flex justify-between items-center">
-                <h2 className="font-display text-[2rem] uppercase tracking-[0.1em] text-white">Профиль лояльности</h2>
+                <h2 className="font-display text-[1.55rem] uppercase tracking-[0.08em] text-white">Профиль лояльности</h2>
                 <button onClick={() => setIsProfileOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full"><X size={20} /></button>
               </div>
 
@@ -731,7 +736,7 @@ export default function App() {
                   <Star size={40} fill="white" className="text-white" />
                 </div>
                 <div>
-                  <p className="font-display text-5xl uppercase tracking-[0.08em] text-white">{loyaltyPoints}</p>
+                  <p className="font-display text-4xl uppercase tracking-[0.08em] text-white">{loyaltyPoints}</p>
                   <p className="text-xs font-bold uppercase tracking-widest text-white/40">Доступных баллов</p>
                 </div>
               </div>
@@ -838,15 +843,16 @@ export default function App() {
 const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWeight) => void; onClick: () => void }> = ({ product, onAdd, onClick }) => {
   const [selectedWeightIdx, setSelectedWeightIdx] = useState(0);
   const selectedWeight = product.weights[selectedWeightIdx];
+  const hasMultipleWeights = product.weights.length > 1;
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="glass-panel min-w-0 overflow-hidden rounded-[28px] flex flex-col"
+      className="glass-panel min-w-0 overflow-hidden rounded-[26px] flex flex-col"
     >
-      <div className="relative aspect-square overflow-hidden group cursor-pointer" onClick={onClick}>
+      <div className="relative aspect-[1.06/1] overflow-hidden group cursor-pointer" onClick={onClick}>
         <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.76))]" />
         <div className="absolute bottom-2 left-2 glass-chip rounded-lg p-1.5">
@@ -854,10 +860,10 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
         </div>
       </div>
 
-      <div className="p-3 space-y-3 flex-1 flex flex-col">
-        <h3 className="font-display text-lg uppercase leading-[0.92] tracking-[0.06em] line-clamp-2 min-h-[3.2rem] cursor-pointer text-white" onClick={onClick}>{product.name}</h3>
+      <div className="flex flex-1 flex-col gap-2.5 p-3">
+        <h3 className="cursor-pointer text-[0.86rem] font-semibold uppercase leading-[0.96] tracking-[0.03em] text-white line-clamp-3 min-h-[2.65rem]" onClick={onClick}>{product.name}</h3>
 
-        {product.weights.length > 1 && (
+        {hasMultipleWeights && (
           <div className="flex flex-wrap gap-1.5 self-start">
             {product.weights.map((w, idx) => (
               <button
@@ -874,16 +880,16 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
           </div>
         )}
 
-        <div className="pt-1 mt-auto flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col">
+        <div className={cn("mt-auto flex items-end justify-between gap-2", !hasMultipleWeights && "pt-2")}>
+          <div className="min-w-0 flex flex-col">
             <span className="text-[10px] text-white/40 font-medium uppercase tracking-[0.18em]">Цена</span>
-            <span className="font-display text-2xl uppercase tracking-[0.04em] text-[#dbff4f]">{selectedWeight.price}р</span>
+            <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{selectedWeight.price}р</span>
           </div>
           <button 
             onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
-            className="liquid-button h-11 w-11 rounded-2xl p-0 active:scale-90"
+            className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
           >
-            <Plus size={18} />
+            <Plus size={17} />
           </button>
         </div>
       </div>
