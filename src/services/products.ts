@@ -315,11 +315,13 @@ export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
         const amount = parseNumber(
           getNormalizedField(row, ['amount_received', 'Amount Received', 'paid_total', 'Paid Total', 'loyalty_base_amount', 'Loyalty Base Amount', 'total', 'Total', 'Сумма'])
         );
-        const paidAt = getNormalizedField(row, ['paid_at', 'Paid At', 'Дата оплаты', 'date', 'Дата']) || new Date().toISOString();
+        const paidAt =
+          getNormalizedField(row, ['paid_at', 'Paid At', 'Дата оплаты']) ||
+          getNormalizedField(row, ['created_at', 'Created At', 'createdAt', 'Дата заказа', 'date', 'Дата']);
 
         return { userId, paymentStatus, amount, paidAt };
       })
-      .filter((row: any) => row.userId && isPaidStatus(row.paymentStatus) && row.amount > 0)
+      .filter((row: any) => row.userId && isPaidStatus(row.paymentStatus) && row.amount > 0 && row.paidAt)
       .map((row: any) => ({
         userId: row.userId,
         amount: row.amount,

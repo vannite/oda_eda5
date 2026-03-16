@@ -87,6 +87,52 @@ function buildFeaturedFeed(products: Product[]): Product[] {
   return ordered;
 }
 
+function parseLoyaltyRecordDate(rawValue: string): Date | null {
+  const normalized = rawValue.trim();
+  if (!normalized) return null;
+
+  const nativeDate = new Date(normalized);
+  if (!Number.isNaN(nativeDate.getTime())) {
+    return nativeDate;
+  }
+
+  const moscowMatch = normalized.match(
+    /^(\d{2})\.(\d{2})\.(\d{4})(?:[ T](\d{2}):(\d{2}))?(?:\s*MSK)?$/i
+  );
+
+  if (!moscowMatch) return null;
+
+  const [, day, month, year, hours = '00', minutes = '00'] = moscowMatch;
+  const utcTimestamp = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours) - 3,
+    Number(minutes)
+  );
+
+  const parsedDate = new Date(utcTimestamp);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function calculateAvailableLoyaltyPoints(userId: string, records: Awaited<ReturnType<typeof fetchLoyaltyData>>): number {
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  const totalPoints = records
+    .filter((record) => record.userId === userId)
+    .reduce((sum, record) => {
+      const recordDate = parseLoyaltyRecordDate(record.date);
+      if (!recordDate || recordDate < threeMonthsAgo) {
+        return sum;
+      }
+
+      return sum + record.amount * 0.03;
+    }, 0);
+
+  return Math.floor(totalPoints);
+}
+
 async function copyOrderMessage(message: string): Promise<boolean> {
   if (!navigator.clipboard?.writeText) return false;
 
@@ -136,6 +182,15 @@ export default function App() {
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
   const userId = telegramUser?.id?.toString() || 'guest';
+
+  const loadLoyaltyBalance = async () => {
+    try {
+      const loyaltyData = await fetchLoyaltyData();
+      setLoyaltyPoints(calculateAvailableLoyaltyPoints(userId, loyaltyData));
+    } catch (error) {
+      console.warn('Loyalty data failed to load', error);
+    }
+  };
 
   useEffect(() => {
     const storedCart = localStorage.getItem(`cart_${userId}`);
@@ -190,18 +245,7 @@ export default function App() {
         if (!isMounted) return;
 
         setPromoCodes(promoData);
-
-        const userRecords = loyaltyData.filter(r => r.userId === userId);
-        const totalPoints = userRecords.reduce((sum, r) => {
-          const recordDate = new Date(r.date);
-          const threeMonthsAgo = new Date();
-          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-          if (recordDate > threeMonthsAgo) {
-            return sum + (r.amount * 0.03);
-          }
-          return sum;
-        }, 0);
-        setLoyaltyPoints(Math.floor(totalPoints));
+        setLoyaltyPoints(calculateAvailableLoyaltyPoints(userId, loyaltyData));
       } catch (error) {
         console.warn('Secondary app data failed to load', error);
       }
@@ -214,6 +258,28 @@ export default function App() {
       isMounted = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    const refreshLoyaltyOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadLoyaltyBalance();
+      }
+    };
+
+    document.addEventListener('visibilitychange', refreshLoyaltyOnVisible);
+    window.addEventListener('focus', refreshLoyaltyOnVisible);
+
+    return () => {
+      document.removeEventListener('visibilitychange', refreshLoyaltyOnVisible);
+      window.removeEventListener('focus', refreshLoyaltyOnVisible);
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (isProfileOpen) {
+      void loadLoyaltyBalance();
+    }
+  }, [isProfileOpen, userId]);
 
   useEffect(() => {
     localStorage.setItem(`cart_${userId}`, JSON.stringify(cart));
@@ -564,9 +630,9 @@ export default function App() {
         >
           <div className="glass-chip relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#dbff4f]">
             <Star size={20} fill={loyaltyPoints > 0 ? "currentColor" : "none"} />
-            {loyaltyPoints > 0 && (
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#090b14] bg-[#7bffc7]" />
-            )}
+            <span className="absolute -bottom-2 left-1/2 min-w-[24px] -translate-x-1/2 rounded-full border border-[#090b14] bg-[#dbff4f] px-1.5 py-[1px] text-center text-[9px] font-black leading-none text-[#090b14] shadow-[0_8px_18px_rgba(219,255,79,0.25)]">
+              {loyaltyPoints}
+            </span>
           </div>
           <div className="min-w-0">
             <h1 className="font-display text-[1.25rem] uppercase tracking-[0.12em] text-white">ODA EDA</h1>
