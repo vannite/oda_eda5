@@ -1,6 +1,7 @@
 export interface ProductWeight {
   weight: string;
   price: number;
+  priceLabel?: string;
 }
 
 export interface Product {

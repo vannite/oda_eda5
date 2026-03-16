@@ -124,6 +124,18 @@ function normalizeCategory(value: string): string {
   return 'другое';
 }
 
+function extractLeadingNumber(value: string): number {
+  const match = value.replace(',', '.').match(/\d+(?:\.\d+)?/);
+  return match ? parseFloat(match[0]) : 0;
+}
+
+function normalizePriceLabel(value: string, fallbackPrice: number): string {
+  const trimmed = value.trim();
+  if (!trimmed) return `${fallbackPrice}р`;
+  if (/[рp]/i.test(trimmed)) return trimmed;
+  return `${trimmed}р`;
+}
+
 export async function fetchProducts(): Promise<Product[]> {
   const cachedProducts = readCache<Product[]>(PRODUCTS_CACHE_KEY, CACHE_TTL_MS);
   if (cachedProducts) {
@@ -142,7 +154,8 @@ export async function fetchProducts(): Promise<Product[]> {
       const photo = (row['Фото'] || row['фото'] || row['Photo'] || row['Image'])?.trim();
       const weight = (row['Вес в гр'] || row['вес'] || row['Weight'])?.trim();
       const priceStr = (row['Цена'] || row['цена'] || row['Price'])?.toString() || '0';
-      const price = parseFloat(priceStr.replace(/[^\d.]/g, '') || '0');
+      const price = extractLeadingNumber(priceStr);
+      const priceLabel = normalizePriceLabel(priceStr, price);
       const description = (row['Описание'] || row['описание'] || row['Description'])?.trim() || '';
       const category = normalizeCategory(
         (row['категория'] || row['Категория'] || row['category'] || row['Category'])?.toString() || ''
@@ -155,11 +168,11 @@ export async function fetchProducts(): Promise<Product[]> {
           description: description, 
           image: photo,
           category,
-          weights: [{ weight, price }]
+          weights: [{ weight, price, priceLabel }]
         };
         products.push(currentProduct);
       } else if (currentProduct && weight && price) {
-        currentProduct.weights.push({ weight, price });
+        currentProduct.weights.push({ weight, price, priceLabel });
       }
     });
 

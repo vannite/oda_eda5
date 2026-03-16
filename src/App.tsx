@@ -37,8 +37,12 @@ function getProductCategory(product: Product): Exclude<CategoryKey, 'all'> {
 }
 
 function getNumericWeight(weight: string): number {
-  const parsed = parseFloat(weight.replace(',', '.').replace(/[^\d.]/g, ''));
+  const parsed = parseFloat((weight.replace(',', '.').match(/\d+(?:\.\d+)?/) || ['0'])[0]);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function formatWeightPrice(weight: ProductWeight): string {
+  return weight.priceLabel?.trim() || `${weight.price}р`;
 }
 
 function getProductMinPrice(product: Product): number {
@@ -438,7 +442,7 @@ export default function App() {
 
   const buildOrderPayload = (): OrderLogPayload => {
     const itemsText = cart.map(item => 
-      `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${item.selectedWeight.price * item.quantity}р`
+      `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${formatWeightPrice(item.selectedWeight)}`
     ).join('\n');
 
     return {
@@ -525,7 +529,7 @@ export default function App() {
 
   const confirmCheckout = async () => {
     const itemsText = cart.map(item => 
-      `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${item.selectedWeight.price * item.quantity}р`
+      `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${formatWeightPrice(item.selectedWeight)}`
     ).join('\n');
 
     const deliveryText = selectedDelivery ? `${selectedDelivery.name} (${deliveryCost}р)` : 'Не выбрано';
@@ -927,7 +931,7 @@ export default function App() {
                           <img src={item.image} alt={item.name} className="h-14 w-14 rounded-xl object-cover bg-white/5" referrerPolicy="no-referrer" />
                           <div className="min-w-0 flex-1">
                             <h3 className="truncate text-sm font-medium leading-tight">{item.name}</h3>
-                            <p className="text-xs text-white/40 mt-1">{item.selectedWeight.weight} • {item.selectedWeight.price}р</p>
+                            <p className="text-xs text-white/40 mt-1">{item.selectedWeight.weight} • {formatWeightPrice(item.selectedWeight)}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2 rounded-full bg-white/5 p-1">
                             <button onClick={() => removeFromCart(item.id, item.selectedWeight.weight)} className="glass-chip flex h-8 w-8 items-center justify-center rounded-full"><Minus size={14} /></button>
@@ -1419,7 +1423,7 @@ const ProductCard: React.FC<{
           <div className="flex items-end justify-between gap-2">
             <div className="min-w-0 flex flex-col">
               <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">Цена</span>
-              <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{selectedWeight.price}р</span>
+              <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{formatWeightPrice(selectedWeight)}</span>
             </div>
             {currentQuantity === 0 && (
               <button 
@@ -1478,7 +1482,7 @@ const ProductWeightSelector: React.FC<{ product: Product; onAdd: (p: Product, w:
               selectedIdx === idx ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f]" : "bg-white/5 border-white/10 text-white/60"
             )}
           >
-            {w.weight} — {w.price}р
+            {w.weight} — {formatWeightPrice(w)}
           </button>
         ))}
       </div>
@@ -1486,7 +1490,7 @@ const ProductWeightSelector: React.FC<{ product: Product; onAdd: (p: Product, w:
         onClick={() => onAdd(product, weight)}
         className="liquid-button w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
       >
-        Добавить в корзину — {weight.price}р
+        Добавить в корзину — {formatWeightPrice(weight)}
       </button>
     </div>
   );
