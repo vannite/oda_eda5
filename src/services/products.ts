@@ -60,6 +60,19 @@ function isValidCsvPayload(payload: string, contentType: string): boolean {
   return payload.includes(',') || payload.includes(';') || payload.includes('\n');
 }
 
+function normalizeCategory(value: string): string {
+  const normalized = value.trim().toLowerCase();
+
+  if (!normalized) return 'другое';
+  if (normalized.includes('мяс')) return 'мясо';
+  if (normalized.includes('сыр')) return 'сыры';
+  if (normalized.includes('олив') || normalized.includes('маслин')) return 'оливки';
+  if (normalized.includes('орех') || normalized.includes('фисташ') || normalized.includes('миндал')) return 'орехи';
+  if (normalized.includes('снек') || normalized.includes('чипс') || normalized.includes('прингл') || normalized.includes('крекер')) return 'снеки';
+
+  return 'другое';
+}
+
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const csvData = await fetchSheetCsv('/api/sheets/products', PRODUCTS_URL);
@@ -75,6 +88,9 @@ export async function fetchProducts(): Promise<Product[]> {
       const priceStr = (row['Цена'] || row['цена'] || row['Price'])?.toString() || '0';
       const price = parseFloat(priceStr.replace(/[^\d.]/g, '') || '0');
       const description = (row['Описание'] || row['описание'] || row['Description'])?.trim() || '';
+      const category = normalizeCategory(
+        (row['категория'] || row['Категория'] || row['category'] || row['Category'])?.toString() || ''
+      );
 
       if (name && photo) {
         currentProduct = {
@@ -82,6 +98,7 @@ export async function fetchProducts(): Promise<Product[]> {
           name: name,
           description: description, 
           image: photo,
+          category,
           weights: [{ weight, price }]
         };
         products.push(currentProduct);

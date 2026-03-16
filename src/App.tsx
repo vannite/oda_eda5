@@ -19,6 +19,7 @@ function cn(...inputs: ClassValue[]) {
 const CATEGORY_ORDER = ['all', 'мясо', 'сыры', 'оливки', 'орехи', 'снеки', 'другое'] as const;
 
 type CategoryKey = typeof CATEGORY_ORDER[number];
+type PriceSort = 'featured' | 'asc' | 'desc';
 
 const CATEGORY_LABELS: Record<CategoryKey, string> = {
   all: 'Все',
@@ -30,26 +31,60 @@ const CATEGORY_LABELS: Record<CategoryKey, string> = {
   другое: 'Другое',
 };
 
-const CATEGORY_KEYWORDS: Record<Exclude<CategoryKey, 'all'>, string[]> = {
-  мясо: ['хамон', 'салями', 'колбас', 'прошутто', 'бекон', 'мяс', 'серрано', 'чоризо', 'пастрами', 'пепперони'],
-  сыры: ['сыр', 'пармиджано', 'пармезан', 'бри', 'камамбер', 'чеддер', 'горгонзола', 'гауда', 'моцарелла', 'пекорино'],
-  оливки: ['олив', 'маслин', 'тапенад'],
-  орехи: ['орех', 'миндаль', 'фисташ', 'кешью', 'пекан', 'фундук', 'грецк'],
-  снеки: ['чипс', 'снек', 'крекер', 'палочк', 'сухар', 'начос'],
-  другое: [],
-};
-
 function getProductCategory(product: Product): Exclude<CategoryKey, 'all'> {
-  const haystack = `${product.name} ${product.description || ''}`.toLowerCase();
+  const normalized = product.category?.trim().toLowerCase();
+  return (CATEGORY_ORDER.includes(normalized as CategoryKey) ? normalized : 'другое') as Exclude<CategoryKey, 'all'>;
+}
 
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as Array<[Exclude<CategoryKey, 'all'>, string[]]>) {
-    if (category === 'другое') continue;
-    if (keywords.some((keyword) => haystack.includes(keyword))) {
-      return category;
+function getNumericWeight(weight: string): number {
+  const parsed = parseFloat(weight.replace(',', '.').replace(/[^\d.]/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function getProductMinPrice(product: Product): number {
+  return Math.min(...product.weights.map((weight) => weight.price));
+}
+
+function getProductValueScore(product: Product): number {
+  return Math.max(
+    ...product.weights.map((weight) => {
+      const quantity = getNumericWeight(weight.weight);
+      return quantity / Math.max(weight.price, 1);
+    })
+  );
+}
+
+function buildFeaturedFeed(products: Product[]): Product[] {
+  const pool = products.map((product) => {
+    const valueScore = getProductValueScore(product);
+    const minPrice = getProductMinPrice(product);
+
+    return {
+      product,
+      weight: 1 + valueScore * 2600 + (1 / Math.max(minPrice, 1)) * 320,
+    };
+  });
+
+  const ordered: Product[] = [];
+
+  while (pool.length > 0) {
+    const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+    let roll = Math.random() * totalWeight;
+    let pickedIndex = 0;
+
+    for (let index = 0; index < pool.length; index += 1) {
+      roll -= pool[index].weight;
+      if (roll <= 0) {
+        pickedIndex = index;
+        break;
+      }
     }
+
+    const [picked] = pool.splice(pickedIndex, 1);
+    ordered.push(picked.product);
   }
 
-  return 'другое';
+  return ordered;
 }
 
 export default function App() {
@@ -79,6 +114,8 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showPrepaymentInfo, setShowPrepaymentInfo] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('all');
+  const [priceSort, setPriceSort] = useState<PriceSort>('featured');
+  const [homeFeedVersion, setHomeFeedVersion] = useState(0);
 
   const userId = WebApp.initDataUnsafe.user?.id?.toString() || 'guest';
 
@@ -94,6 +131,7 @@ export default function App() {
         fetchLoyaltyData()
       ]);
       setProducts(productsData);
+      setHomeFeedVersion((value) => value + 1);
       setDeliveryOptions(deliveryData);
       setPromoCodes(promoData);
       
@@ -251,10 +289,18 @@ export default function App() {
     setSelectedProduct(product);
   };
 
+  const featuredProducts = useMemo(() => buildFeaturedFeed(products), [products, homeFeedVersion]);
+
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'all') return products;
-    return products.filter((product) => getProductCategory(product) === selectedCategory);
-  }, [products, selectedCategory]);
+    const source = priceSort === 'featured' ? featuredProducts : [...products].sort((left, right) => {
+      const leftPrice = getProductMinPrice(left);
+      const rightPrice = getProductMinPrice(right);
+      return priceSort === 'asc' ? leftPrice - rightPrice : rightPrice - leftPrice;
+    });
+
+    if (selectedCategory === 'all') return source;
+    return source.filter((product) => getProductCategory(product) === selectedCategory);
+  }, [featuredProducts, priceSort, products, selectedCategory]);
 
   const categoryCounts = useMemo(() => {
     return CATEGORY_ORDER.reduce<Record<CategoryKey, number>>((acc, category) => {
@@ -373,39 +419,63 @@ export default function App() {
           <div className="relative space-y-3">
             <p className="section-kicker">Curated selection</p>
             <div className="space-y-2">
-              <h2 className="max-w-[18rem] font-display text-[1.3rem] uppercase leading-[0.94] tracking-[0.07em] text-white">
-                Редкие деликатесы без случайной наценки
+              <h2 className="max-w-[15rem] font-display text-[1.65rem] uppercase leading-[1] tracking-[0.05em] text-white">
+                Редкое вкусное
+                <br />
+                по честной цене
               </h2>
-              <p className="max-w-[22rem] text-[12px] leading-relaxed text-white/62">
-                Здесь удобно собрать и редкие позиции, которые бывает сложно найти в обычных магазинах: от выдержанных сыров и мясных деликатесов до аккуратных закусок по вменяемой цене.
+              <p className="max-w-[21rem] text-[12px] leading-[1.35] text-white/62">
+                Собрали в одном месте позиции, за которыми обычно приходится ездить по разным магазинам: выдержанные сыры, мясные деликатесы, оливки, орехи и аккуратные снеки.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 pb-1">
-          <div className="flex gap-2">
-            {CATEGORY_ORDER.map((category) => {
-              const isActive = selectedCategory === category;
-              return (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all",
-                    isActive
-                      ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f] shadow-[0_0_24px_rgba(219,255,79,0.14)]"
-                      : "border-white/10 bg-white/[0.03] text-white/56"
-                  )}
-                >
-                  <span>{CATEGORY_LABELS[category]}</span>
-                  <span className={cn("text-[10px]", isActive ? "text-[#dbff4f]/90" : "text-white/32")}>
-                    {categoryCounts[category]}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="flex items-start gap-2">
+          <div className="scrollbar-hide min-w-0 flex-1 overflow-x-auto pb-1">
+            <div className="flex gap-2 pr-2">
+              {CATEGORY_ORDER.map((category) => {
+                const isActive = selectedCategory === category;
+                return (
+                  <button
+                    key={category}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      if (category === 'all') {
+                        setHomeFeedVersion((value) => value + 1);
+                      }
+                    }}
+                    className={cn(
+                      "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all",
+                      isActive
+                        ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f] shadow-[0_0_24px_rgba(219,255,79,0.14)]"
+                        : "border-white/10 bg-white/[0.03] text-white/56"
+                    )}
+                  >
+                    <span>{CATEGORY_LABELS[category]}</span>
+                    <span className={cn("text-[10px]", isActive ? "text-[#dbff4f]/90" : "text-white/32")}>
+                      {categoryCounts[category]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          <button
+            onClick={() => {
+              setPriceSort((current) => {
+                if (current === 'featured') return 'desc';
+                if (current === 'desc') return 'asc';
+                return 'featured';
+              });
+            }}
+            className="glass-chip flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/72"
+          >
+            <span>
+              {priceSort === 'featured' ? 'Выгодно' : priceSort === 'desc' ? 'Цена ↓' : 'Цена ↑'}
+            </span>
+          </button>
         </div>
       </section>
 
@@ -1016,23 +1086,34 @@ const ProductCard: React.FC<{
           </div>
         )}
 
-        <div className={cn("mt-auto flex items-end justify-between gap-2", !hasMultipleWeights && "pt-2")}>
-          <div className="min-w-0 flex flex-col">
-            <span className="text-[10px] text-white/40 font-medium uppercase tracking-[0.18em]">Цена</span>
-            <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{selectedWeight.price}р</span>
+        <div className={cn("mt-auto flex flex-col gap-3", !hasMultipleWeights && "pt-2")}>
+          <div className="flex items-end justify-between gap-2">
+            <div className="min-w-0 flex flex-col">
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">Цена</span>
+              <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{selectedWeight.price}р</span>
+            </div>
+            {currentQuantity === 0 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
+                className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
+              >
+                <Plus size={17} />
+              </button>
+            )}
           </div>
-          {currentQuantity > 0 ? (
-            <div className="flex h-11 shrink-0 items-center rounded-full bg-[#ff2b2b] px-1.5 text-white shadow-[0_12px_30px_rgba(255,43,43,0.28)]">
+
+          {currentQuantity > 0 && (
+            <div className="flex w-full items-center rounded-full bg-[#ff3a34] px-2 py-1.5 text-white shadow-[0_14px_34px_rgba(255,58,52,0.28)]">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(product.id, selectedWeight.weight);
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white/92"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/92"
               >
                 <Minus size={16} />
               </button>
-              <span className="min-w-[3.5rem] px-2 text-center text-[0.95rem] font-bold">
+              <span className="flex-1 text-center text-[0.95rem] font-bold">
                 {currentQuantity} шт
               </span>
               <button
@@ -1040,18 +1121,11 @@ const ProductCard: React.FC<{
                   e.stopPropagation();
                   onAdd(product, selectedWeight);
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white/92"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/92"
               >
                 <Plus size={16} />
               </button>
             </div>
-          ) : (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
-              className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
-            >
-              <Plus size={17} />
-            </button>
           )}
         </div>
       </div>
