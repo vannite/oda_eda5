@@ -377,7 +377,7 @@ export default function App() {
       lastName: telegramUser?.last_name || '',
       createdAt: new Date().toISOString(),
       status: 'checkout_clicked',
-      paymentStatus: 'pending',
+      paymentStatus: 'пендинг',
       itemsSummary: itemsText,
       cartSnapshot: JSON.stringify(cart),
       subtotal,
@@ -419,6 +419,14 @@ export default function App() {
 
     WebApp.openTelegramLink(bestEffortTextUrl);
     setShowPrepaymentInfo(false);
+    setCart([]);
+    localStorage.removeItem(`cart_${userId}`);
+    setAppliedPromo(null);
+    setPromoInput('');
+    setBargainPercent(null);
+    setCustomBargain('');
+    setIsPriority(false);
+    setIsLoyaltyApplied(false);
 
     if (!copiedToClipboard) {
       localStorage.setItem(`last_order_message_${userId}`, message);
@@ -734,27 +742,50 @@ export default function App() {
                     {/* Delivery Options */}
                     <div className="space-y-4">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Доставка</h3>
-                      <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-2">
                         {deliveryOptions.map((option) => (
+                          (() => {
+                            const isSelected = selectedDeliveryId === option.id;
+                            return (
                             <button 
                               key={option.id}
                               onClick={() => setSelectedDeliveryId(option.id)}
                               className={cn(
-                                "glass-panel relative flex min-h-[138px] flex-col items-start justify-between gap-2 overflow-hidden rounded-[24px] p-4 text-left transition-all",
-                                selectedDeliveryId === option.id ? "ring-1 ring-[#dbff4f] shadow-[0_0_40px_rgba(219,255,79,0.18)]" : ""
+                                "glass-panel relative flex min-h-[78px] items-center gap-3 overflow-hidden rounded-[20px] px-4 py-3 text-left transition-all",
+                                isSelected
+                                  ? "border border-[#dbff4f]/70 bg-[linear-gradient(180deg,rgba(219,255,79,0.18),rgba(123,255,199,0.10))] shadow-[0_0_0_1px_rgba(219,255,79,0.55),0_0_28px_rgba(219,255,79,0.14)]"
+                                  : "border border-white/8"
                               )}
                             >
-                            <div className="flex justify-between w-full items-center">
-                              {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
-                              <span className="font-display text-lg uppercase tracking-[0.06em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
-                            </div>
-                              <span className="max-w-full whitespace-normal break-normal text-[0.9rem] font-semibold leading-[1.1] tracking-0 text-white [hyphens:none] [overflow-wrap:normal] [word-break:normal]">
-                                {option.name}
+                              <div className={cn(
+                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl",
+                                isSelected ? "bg-[rgba(219,255,79,0.18)] text-[#dbff4f]" : "bg-white/[0.05] text-white/60"
+                              )}>
+                                {option.type === 'pickup' ? <Store size={16} /> : <Truck size={16} />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-[0.86rem] font-semibold leading-[1] text-white">
+                                    {option.name}
+                                  </span>
+                                  {isSelected && (
+                                    <span className="shrink-0 rounded-full bg-[#dbff4f] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#090b14]">
+                                      Выбрано
+                                    </span>
+                                  )}
+                                </div>
+                                {getDeliveryConditionLabel(option) && (
+                                  <span className={cn("mt-1 block text-[10px] leading-tight", isSelected ? "text-white/62" : "text-white/40")}>
+                                    {getDeliveryConditionLabel(option)}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="shrink-0 font-display text-[1rem] uppercase tracking-[0.05em] text-[#dbff4f]">
+                                {totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р
                               </span>
-                            {getDeliveryConditionLabel(option) && (
-                              <span className="text-[10px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
-                            )}
-                          </button>
+                            </button>
+                            );
+                          })()
                         ))}
                       </div>
                     </div>

@@ -202,7 +202,7 @@ function getNormalizedField(row: Record<string, unknown>, keys: string[]): strin
 
 function isPaidStatus(value: string): boolean {
   const normalized = value.trim().toLowerCase();
-  return ['paid', 'оплачено', 'оплачен', 'paid_manual', 'confirmed_paid', 'зачислено'].includes(normalized);
+  return ['paid', 'оплата', 'оплачено', 'оплачен', 'paid_manual', 'confirmed_paid', 'зачислено'].includes(normalized);
 }
 
 export async function fetchPromoCodes(): Promise<PromoCode[]> {
