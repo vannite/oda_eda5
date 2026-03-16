@@ -3,6 +3,7 @@ const TARGET_SHEET_GID = 1831701351;
 const ECONOMICS_SHEET_NAME = 'Экономика';
 const CUSTOMERS_SHEET_NAME = 'Покупатели';
 const FEEDBACK_SHEET_NAME = 'Отзывы';
+const MOSCOW_TIMEZONE = 'Europe/Moscow';
 
 const ORDER_HEADERS = [
   'order_id',
@@ -13,7 +14,7 @@ const ORDER_HEADERS = [
   'created_at',
   'status',
   'payment_status',
-  'paid_total',
+  'amount_received',
   'paid_at',
   'items_summary',
   'cart_snapshot',
@@ -62,10 +63,10 @@ function doPost(e) {
       payload.username || '',
       payload.firstName || '',
       payload.lastName || '',
-      payload.createdAt || '',
+      formatMoscowDate_(new Date()),
       payload.status || 'checkout_clicked',
       payload.paymentStatus || 'пендинг',
-      payload.paidTotal || '',
+      '',
       payload.paidAt || '',
       payload.itemsSummary || '',
       payload.cartSnapshot || '',
@@ -111,7 +112,7 @@ function ensureOrdersHeader_(sheet) {
   }
 
   const paymentStatusColumn = ORDER_HEADERS.indexOf('payment_status') + 1;
-  const paidTotalColumn = ORDER_HEADERS.indexOf('paid_total') + 1;
+  const amountReceivedColumn = ORDER_HEADERS.indexOf('amount_received') + 1;
   const paidAtColumn = ORDER_HEADERS.indexOf('paid_at') + 1;
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
 
@@ -121,8 +122,8 @@ function ensureOrdersHeader_(sheet) {
     .build();
 
   sheet.getRange(2, paymentStatusColumn, maxRows, 1).setDataValidation(paymentStatusRule);
-  sheet.getRange(2, paidTotalColumn, maxRows, 1).setNumberFormat('#,##0');
-  sheet.getRange(2, paidAtColumn, maxRows, 1).setNumberFormat('yyyy-mm-dd hh:mm');
+  sheet.getRange(2, amountReceivedColumn, maxRows, 1).setNumberFormat('#,##0');
+  sheet.getRange(2, paidAtColumn, maxRows, 1).setNumberFormat('@');
   sheet.setFrozenRows(1);
 }
 
@@ -130,7 +131,7 @@ function syncEconomicsSheet_(spreadsheet, ordersSheet) {
   const sheetName = ordersSheet.getName().replace(/'/g, "\\'");
   const paymentStatusCol = columnLetter_(ORDER_HEADERS.indexOf('payment_status') + 1);
   const paidAtCol = columnLetter_(ORDER_HEADERS.indexOf('paid_at') + 1);
-  const paidTotalCol = columnLetter_(ORDER_HEADERS.indexOf('paid_total') + 1);
+  const amountReceivedCol = columnLetter_(ORDER_HEADERS.indexOf('amount_received') + 1);
   const orderIdCol = columnLetter_(ORDER_HEADERS.indexOf('order_id') + 1);
   const userIdCol = columnLetter_(ORDER_HEADERS.indexOf('user_id') + 1);
   const usernameCol = columnLetter_(ORDER_HEADERS.indexOf('username') + 1);
@@ -160,16 +161,16 @@ function syncEconomicsSheet_(spreadsheet, ordersSheet) {
   economicsSheet.getRange('B7').setFormula(`=COUNTIF('${sheetName}'!${paymentStatusCol}:${paymentStatusCol},"declined")+COUNTIF('${sheetName}'!${paymentStatusCol}:${paymentStatusCol},"отказ")+COUNTIF('${sheetName}'!${paymentStatusCol}:${paymentStatusCol},"cancelled")`);
 
   economicsSheet.getRange('A8').setValue('Оплачено денег');
-  economicsSheet.getRange('B8').setFormula(`=SUM('${sheetName}'!${paidTotalCol}:${paidTotalCol})`);
+  economicsSheet.getRange('B8').setFormula(`=SUM('${sheetName}'!${amountReceivedCol}:${amountReceivedCol})`);
 
   economicsSheet.getRange('A9').setValue('Средний оплаченный чек');
-  economicsSheet.getRange('B9').setFormula(`=IFERROR(AVERAGE(FILTER('${sheetName}'!${paidTotalCol}:${paidTotalCol},('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="paid")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплата")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплачено"))),0)`);
+  economicsSheet.getRange('B9').setFormula(`=IFERROR(AVERAGE(FILTER('${sheetName}'!${amountReceivedCol}:${amountReceivedCol},('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="paid")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплата")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплачено"))),0)`);
 
   economicsSheet.getRange('A11').setValue('Оплаченные заказы');
-  economicsSheet.getRange('A11:E11').setValues([['order_id', 'user_id', 'username', 'paid_at', 'paid_total']]);
+  economicsSheet.getRange('A11:E11').setValues([['order_id', 'user_id', 'username', 'paid_at', 'amount_received']]);
   economicsSheet.getRange('A11:E11').setFontWeight('bold');
   economicsSheet.getRange('A12').setFormula(
-    `=IFERROR(FILTER({'${sheetName}'!${orderIdCol}:${orderIdCol},'${sheetName}'!${userIdCol}:${userIdCol},'${sheetName}'!${usernameCol}:${usernameCol},'${sheetName}'!${paidAtCol}:${paidAtCol},'${sheetName}'!${paidTotalCol}:${paidTotalCol}},('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="paid")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплата")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплачено")),"")`
+    `=IFERROR(FILTER({'${sheetName}'!${orderIdCol}:${orderIdCol},'${sheetName}'!${userIdCol}:${userIdCol},'${sheetName}'!${usernameCol}:${usernameCol},'${sheetName}'!${paidAtCol}:${paidAtCol},'${sheetName}'!${amountReceivedCol}:${amountReceivedCol}},('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="paid")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплата")+('${sheetName}'!${paymentStatusCol}:${paymentStatusCol}="оплачено")),"")`
   );
 
   economicsSheet.getRange('G11').setValue('Оформлены, но не оплачены');
@@ -281,10 +282,45 @@ function appendFeedback_(spreadsheet, payload) {
     payload.username || '',
     payload.firstName || '',
     payload.lastName || '',
-    payload.createdAt || '',
+    formatMoscowDate_(new Date()),
     payload.subject || '',
     payload.message || '',
   ]);
+}
+
+function onEdit(e) {
+  if (!e || !e.range) return;
+
+  const sheet = e.range.getSheet();
+  if (sheet.getSheetId() !== TARGET_SHEET_GID || e.range.getRow() === 1) return;
+
+  ensureOrdersHeader_(sheet);
+
+  const amountReceivedColumn = ORDER_HEADERS.indexOf('amount_received') + 1;
+  const paymentStatusColumn = ORDER_HEADERS.indexOf('payment_status') + 1;
+  const paidAtColumn = ORDER_HEADERS.indexOf('paid_at') + 1;
+
+  if (e.range.getColumn() !== amountReceivedColumn) return;
+
+  const row = e.range.getRow();
+  const rawValue = String(e.range.getValue() || '').trim().replace(',', '.');
+  const numericValue = parseFloat(rawValue);
+
+  if (Number.isFinite(numericValue) && numericValue > 0) {
+    sheet.getRange(row, paymentStatusColumn).setValue('оплата');
+    sheet.getRange(row, paidAtColumn).setValue(formatMoscowDate_(new Date()));
+  } else {
+    sheet.getRange(row, paymentStatusColumn).setValue('пендинг');
+    sheet.getRange(row, paidAtColumn).setValue('');
+  }
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  syncEconomicsSheet_(spreadsheet, sheet);
+  syncCustomersSheet_(spreadsheet, sheet);
+}
+
+function formatMoscowDate_(date) {
+  return Utilities.formatDate(date, MOSCOW_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
 
 function columnLetter_(columnNumber) {

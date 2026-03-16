@@ -154,38 +154,65 @@ export default function App() {
   useEffect(() => {
     WebApp.ready();
     WebApp.expand();
-    
-    const loadData = async () => {
-      const [productsData, deliveryData, promoData, loyaltyData] = await Promise.all([
-        fetchProducts(),
-        fetchDeliveryOptions(),
-        fetchPromoCodes(),
-        fetchLoyaltyData()
-      ]);
-      setProducts(productsData);
-      setHomeFeedVersion((value) => value + 1);
-      setDeliveryOptions(deliveryData);
-      setPromoCodes(promoData);
-      
-      // Calculate loyalty points
-      const userRecords = loyaltyData.filter(r => r.userId === userId);
-      const totalPoints = userRecords.reduce((sum, r) => {
-        const recordDate = new Date(r.date);
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        if (recordDate > threeMonthsAgo) {
-          return sum + (r.amount * 0.03);
-        }
-        return sum;
-      }, 0);
-      setLoyaltyPoints(Math.floor(totalPoints));
 
-      if (deliveryData.length > 0) {
-        setSelectedDeliveryId(deliveryData[0].id);
+    let isMounted = true;
+
+    const loadCriticalData = async () => {
+      try {
+        const [productsData, deliveryData] = await Promise.all([
+          fetchProducts(),
+          fetchDeliveryOptions(),
+        ]);
+
+        if (!isMounted) return;
+
+        setProducts(productsData);
+        setHomeFeedVersion((value) => value + 1);
+        setDeliveryOptions(deliveryData);
+
+        if (deliveryData.length > 0) {
+          setSelectedDeliveryId((current) => current ?? deliveryData[0].id);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
-    loadData();
+
+    const loadSecondaryData = async () => {
+      try {
+        const [promoData, loyaltyData] = await Promise.all([
+          fetchPromoCodes(),
+          fetchLoyaltyData(),
+        ]);
+
+        if (!isMounted) return;
+
+        setPromoCodes(promoData);
+
+        const userRecords = loyaltyData.filter(r => r.userId === userId);
+        const totalPoints = userRecords.reduce((sum, r) => {
+          const recordDate = new Date(r.date);
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          if (recordDate > threeMonthsAgo) {
+            return sum + (r.amount * 0.03);
+          }
+          return sum;
+        }, 0);
+        setLoyaltyPoints(Math.floor(totalPoints));
+      } catch (error) {
+        console.warn('Secondary app data failed to load', error);
+      }
+    };
+
+    void loadCriticalData();
+    void loadSecondaryData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   useEffect(() => {

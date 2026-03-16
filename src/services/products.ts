@@ -7,6 +7,9 @@ const DELIVERY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?
 const PROMO_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1982833599`;
 const LOYALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1519224442`;
 const ORDERS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1831701351`;
+const PRODUCTS_CACHE_KEY = 'oda_products_cache_v1';
+const DELIVERY_CACHE_KEY = 'oda_delivery_cache_v1';
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
   { price: 100, condition: '0-1 товар', minItems: 0, maxItems: 1 },
@@ -14,6 +17,53 @@ const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
   { price: 50, condition: '3-4 товара', minItems: 3, maxItems: 4 },
   { price: 0, condition: 'От 5 товаров', minItems: 5 }
 ];
+
+function readCache<T>(key: string, ttlMs: number): T | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { value: T; timestamp: number };
+    if (!parsed?.timestamp || Date.now() - parsed.timestamp > ttlMs) {
+      return null;
+    }
+
+    return parsed.value ?? null;
+  } catch (error) {
+    console.warn(`Failed to read cache for ${key}`, error);
+    return null;
+  }
+}
+
+function readStaleCache<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { value: T; timestamp: number };
+    return parsed?.value ?? null;
+  } catch (error) {
+    console.warn(`Failed to read stale cache for ${key}`, error);
+    return null;
+  }
+}
+
+function writeCache<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify({
+      value,
+      timestamp: Date.now(),
+    }));
+  } catch (error) {
+    console.warn(`Failed to write cache for ${key}`, error);
+  }
+}
 
 async function fetchSheetCsv(apiPath: string, fallbackUrl: string): Promise<string> {
   const cacheBuster = `?_=${Date.now()}`;
@@ -75,6 +125,11 @@ function normalizeCategory(value: string): string {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
+  const cachedProducts = readCache<Product[]>(PRODUCTS_CACHE_KEY, CACHE_TTL_MS);
+  if (cachedProducts) {
+    return cachedProducts;
+  }
+
   try {
     const csvData = await fetchSheetCsv('/api/sheets/products', PRODUCTS_URL);
     const results = Papa.parse(csvData, { header: true });
@@ -108,14 +163,24 @@ export async function fetchProducts(): Promise<Product[]> {
       }
     });
 
+    writeCache(PRODUCTS_CACHE_KEY, products);
     return products;
   } catch (error) {
     console.error('Error fetching products:', error);
+    const staleProducts = readStaleCache<Product[]>(PRODUCTS_CACHE_KEY);
+    if (staleProducts) {
+      return staleProducts;
+    }
     return [];
   }
 }
 
 export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
+  const cachedDelivery = readCache<DeliveryOption[]>(DELIVERY_CACHE_KEY, CACHE_TTL_MS);
+  if (cachedDelivery) {
+    return cachedDelivery;
+  }
+
   try {
     const csvData = await fetchSheetCsv('/api/sheets/delivery', DELIVERY_URL);
     const results = Papa.parse(csvData, { header: false });
@@ -134,7 +199,7 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
       .map((tier) => `${tier.condition}: ${tier.price}р`)
       .join(' | ');
 
-    return [
+    const deliveryOptions: DeliveryOption[] = [
       {
         id: 'delivery-office',
         name: 'Тверская, 22',
@@ -158,8 +223,16 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
         condition: individualCell || 'от 500р'
       }
     ];
+
+    writeCache(DELIVERY_CACHE_KEY, deliveryOptions);
+    return deliveryOptions;
   } catch (error) {
     console.error('Error fetching delivery options:', error);
+    const staleDelivery = readStaleCache<DeliveryOption[]>(DELIVERY_CACHE_KEY);
+    if (staleDelivery) {
+      return staleDelivery;
+    }
+
     return [
       {
         id: 'default-office',
@@ -240,7 +313,7 @@ export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
         const userId = getNormalizedField(row, ['user_id', 'User ID', 'ID', 'id', 'айди']);
         const paymentStatus = getNormalizedField(row, ['payment_status', 'Payment Status', 'Статус оплаты', 'оплата']);
         const amount = parseNumber(
-          getNormalizedField(row, ['paid_total', 'Paid Total', 'loyalty_base_amount', 'Loyalty Base Amount', 'total', 'Total', 'Сумма'])
+          getNormalizedField(row, ['amount_received', 'Amount Received', 'paid_total', 'Paid Total', 'loyalty_base_amount', 'Loyalty Base Amount', 'total', 'Total', 'Сумма'])
         );
         const paidAt = getNormalizedField(row, ['paid_at', 'Paid At', 'Дата оплаты', 'date', 'Дата']) || new Date().toISOString();
 
