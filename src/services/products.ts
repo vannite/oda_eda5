@@ -1,11 +1,12 @@
 import Papa from 'papaparse';
-import { Product, DeliveryOption, DeliveryTier, PromoCode, LoyaltyRecord } from '../types';
+import { Product, DeliveryOption, DeliveryTier, PromoCode, LoyaltyRecord, OrderLogPayload } from '../types';
 
 const SHEET_ID = '1oXwz2zznkpY10M5GumIET6E96TjEEMd3jISM4FUy2f0';
 const PRODUCTS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 const DELIVERY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=115101300`;
 const PROMO_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1982833599`;
 const LOYALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1519224442`;
+const ORDERS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1831701351`;
 
 const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
   { price: 100, condition: '0-1 товар', minItems: 0, maxItems: 1 },
@@ -170,6 +171,26 @@ function parsePrice(value: string): number {
   return parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.') || '0');
 }
 
+function parseNumber(value: unknown): number {
+  return parseFloat(String(value ?? '').replace(/[^\d.,-]/g, '').replace(',', '.') || '0');
+}
+
+function getNormalizedField(row: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value).trim();
+    }
+  }
+
+  return '';
+}
+
+function isPaidStatus(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return ['paid', 'оплачено', 'оплачен', 'paid_manual', 'confirmed_paid', 'зачислено'].includes(normalized);
+}
+
 export async function fetchPromoCodes(): Promise<PromoCode[]> {
   try {
     const csvData = await fetchSheetCsv('/api/sheets/promo', PROMO_URL);
@@ -197,6 +218,35 @@ export async function fetchPromoCodes(): Promise<PromoCode[]> {
 
 export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
   try {
+    const ordersCsvData = await fetchSheetCsv('/api/sheets/orders', ORDERS_URL);
+    const orderResults = Papa.parse(ordersCsvData, { header: true });
+
+    const orderRecords = orderResults.data
+      .map((row: any) => {
+        const userId = getNormalizedField(row, ['user_id', 'User ID', 'ID', 'id', 'айди']);
+        const paymentStatus = getNormalizedField(row, ['payment_status', 'Payment Status', 'Статус оплаты', 'оплата']);
+        const amount = parseNumber(
+          getNormalizedField(row, ['paid_total', 'Paid Total', 'loyalty_base_amount', 'Loyalty Base Amount', 'total', 'Total', 'Сумма'])
+        );
+        const paidAt = getNormalizedField(row, ['paid_at', 'Paid At', 'Дата оплаты', 'date', 'Дата']) || new Date().toISOString();
+
+        return { userId, paymentStatus, amount, paidAt };
+      })
+      .filter((row: any) => row.userId && isPaidStatus(row.paymentStatus) && row.amount > 0)
+      .map((row: any) => ({
+        userId: row.userId,
+        amount: row.amount,
+        date: row.paidAt,
+      }));
+
+    if (orderRecords.length > 0) {
+      return orderRecords;
+    }
+  } catch (error) {
+    console.warn('Orders sheet loyalty fallback failed, using legacy loyalty sheet', error);
+  }
+
+  try {
     const csvData = await fetchSheetCsv('/api/sheets/loyalty', LOYALTY_URL);
     const results = Papa.parse(csvData, { header: true });
     
@@ -213,5 +263,20 @@ export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
   } catch (error) {
     console.error('Error fetching loyalty data:', error);
     return [];
+  }
+}
+
+export async function submitOrderLog(payload: OrderLogPayload): Promise<void> {
+  const response = await fetch('/api/orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || `Order log request failed with ${response.status}`);
   }
 }

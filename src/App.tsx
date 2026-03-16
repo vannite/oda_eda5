@@ -7,8 +7,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, ChevronRight, Minus, Plus, X, Truck, Store, Info, Star, Zap } from 'lucide-react';
-import { fetchProducts, fetchDeliveryOptions, fetchPromoCodes, fetchLoyaltyData } from './services/products';
-import { Product, CartItem, DeliveryOption, ProductWeight, PromoCode } from './types';
+import { fetchProducts, fetchDeliveryOptions, fetchPromoCodes, fetchLoyaltyData, submitOrderLog } from './services/products';
+import { Product, CartItem, DeliveryOption, ProductWeight, PromoCode, OrderLogPayload } from './types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -88,6 +88,7 @@ function buildFeaturedFeed(products: Product[]): Product[] {
 }
 
 export default function App() {
+  const telegramUser = WebApp.initDataUnsafe.user;
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -117,7 +118,21 @@ export default function App() {
   const [priceSort, setPriceSort] = useState<PriceSort>('featured');
   const [homeFeedVersion, setHomeFeedVersion] = useState(0);
 
-  const userId = WebApp.initDataUnsafe.user?.id?.toString() || 'guest';
+  const userId = telegramUser?.id?.toString() || 'guest';
+
+  useEffect(() => {
+    const storedCart = localStorage.getItem(`cart_${userId}`);
+    if (!storedCart) return;
+
+    try {
+      const parsedCart = JSON.parse(storedCart) as CartItem[];
+      if (Array.isArray(parsedCart)) {
+        setCart(parsedCart);
+      }
+    } catch (error) {
+      console.warn('Failed to restore cart from localStorage', error);
+    }
+  }, [userId]);
 
   useEffect(() => {
     WebApp.ready();
@@ -155,6 +170,10 @@ export default function App() {
     };
     loadData();
   }, [userId]);
+
+  useEffect(() => {
+    localStorage.setItem(`cart_${userId}`, JSON.stringify(cart));
+  }, [cart, userId]);
 
   const addToCart = (product: Product, selectedWeight: ProductWeight) => {
     setCart(prev => {
@@ -311,7 +330,7 @@ export default function App() {
     }, { all: 0, мясо: 0, сыры: 0, оливки: 0, орехи: 0, снеки: 0, другое: 0 });
   }, [products]);
 
-  const confirmCheckout = () => {
+  const confirmCheckout = async () => {
     const itemsText = cart.map(item => 
       `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${item.selectedWeight.price * item.quantity}р`
     ).join('\n');
@@ -333,6 +352,36 @@ export default function App() {
     const encodedMessage = encodeURIComponent(message.replace(/\n/g, '\r\n'));
     const ownerUsername = 'bd77797';
     const url = `https://t.me/${ownerUsername}?text=${encodedMessage}`;
+
+    const orderPayload: OrderLogPayload = {
+      orderId: `ODA-${userId}-${Date.now()}`,
+      userId,
+      username: telegramUser?.username || '',
+      firstName: telegramUser?.first_name || '',
+      lastName: telegramUser?.last_name || '',
+      createdAt: new Date().toISOString(),
+      status: 'checkout_clicked',
+      paymentStatus: 'pending',
+      itemsSummary: itemsText,
+      cartSnapshot: JSON.stringify(cart),
+      subtotal,
+      deliveryName: selectedDelivery?.name || '',
+      deliveryCost,
+      total,
+      promoCode: appliedPromo?.code || '',
+      promoDiscount,
+      bargainDiscount,
+      loyaltyDiscount,
+      priorityFee,
+      priorityEnabled: isPriority,
+      comment: 'Order created from Telegram Mini App',
+    };
+
+    try {
+      await submitOrderLog(orderPayload);
+    } catch (error) {
+      console.warn('Order log was not saved to Google Sheets', error);
+    }
     
     // Mark promo as used
     if (appliedPromo) {
@@ -419,13 +468,12 @@ export default function App() {
           <div className="relative space-y-3">
             <p className="section-kicker">Curated selection</p>
             <div className="space-y-2">
-              <h2 className="max-w-[15rem] font-display text-[1.65rem] uppercase leading-[1] tracking-[0.05em] text-white">
-                Редкое вкусное
-                <br />
-                по честной цене
+              <h2 className="font-display text-[1.42rem] uppercase leading-[1] tracking-[0.05em] text-white">
+                <span className="block">Редкие деликатесы</span>
+                <span className="block">по честной цене</span>
               </h2>
               <p className="max-w-[21rem] text-[12px] leading-[1.35] text-white/62">
-                Собрали в одном месте позиции, за которыми обычно приходится ездить по разным магазинам: выдержанные сыры, мясные деликатесы, оливки, орехи и аккуратные снеки.
+                Здесь собраны позиции, которые часто сложно найти быстро и в одном месте: выдержанные сыры, мясные деликатесы, оливки, орехи и аккуратные снеки.
               </p>
             </div>
           </div>

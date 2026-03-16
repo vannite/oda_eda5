@@ -45,3 +45,27 @@ export interface LoyaltyRecord {
   amount: number;
   date: string;
 }
+
+export interface OrderLogPayload {
+  orderId: string;
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+  status: string;
+  paymentStatus: string;
+  itemsSummary: string;
+  cartSnapshot: string;
+  subtotal: number;
+  deliveryName: string;
+  deliveryCost: number;
+  total: number;
+  promoCode: string;
+  promoDiscount: number;
+  bargainDiscount: number;
+  loyaltyDiscount: number;
+  priorityFee: number;
+  priorityEnabled: boolean;
+  comment: string;
+}

@@ -6,12 +6,14 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SHEET_ID = "1oXwz2zznkpY10M5GumIET6E96TjEEMd3jISM4FUy2f0";
+const GOOGLE_SHEETS_WEBHOOK_URL = process.env.GOOGLE_SHEETS_WEBHOOK_URL || "";
 
 const SHEET_URLS = {
   products: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`,
   delivery: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=115101300`,
   promo: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1982833599`,
   loyalty: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1519224442`,
+  orders: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1831701351`,
 } as const;
 
 async function startServer() {
@@ -53,6 +55,44 @@ async function startServer() {
     } catch (error) {
       console.error(`Sheet proxy failed for ${sheet}:`, error);
       res.status(502).json({ error: "Failed to fetch sheet" });
+    }
+  });
+
+  app.post("/api/orders", async (req, res) => {
+    if (!GOOGLE_SHEETS_WEBHOOK_URL) {
+      res.status(501).json({
+        error: "Order logging webhook is not configured",
+        requiredEnv: "GOOGLE_SHEETS_WEBHOOK_URL",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const text = await response.text();
+
+      if (!response.ok) {
+        res.status(502).json({
+          error: "Failed to write order to Google Sheets",
+          details: text,
+        });
+        return;
+      }
+
+      res.status(200).json({
+        ok: true,
+        upstream: text,
+      });
+    } catch (error) {
+      console.error("Order logging failed:", error);
+      res.status(502).json({ error: "Order logging failed" });
     }
   });
 
