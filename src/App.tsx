@@ -19,7 +19,7 @@ function cn(...inputs: ClassValue[]) {
 const CATEGORY_ORDER = ['all', 'мясо', 'сыры', 'оливки', 'орехи', 'снеки', 'другое'] as const;
 
 type CategoryKey = typeof CATEGORY_ORDER[number];
-type PriceSort = 'featured' | 'asc' | 'desc';
+type PriceSort = 'none' | 'asc' | 'desc';
 
 const CATEGORY_LABELS: Record<CategoryKey, string> = {
   all: 'Все',
@@ -43,6 +43,11 @@ function getNumericWeight(weight: string): number {
 
 function formatWeightPrice(weight: ProductWeight): string {
   return weight.priceLabel?.trim() || `${weight.price}р`;
+}
+
+function isExtendedPriceLabel(weight: ProductWeight): boolean {
+  const label = formatWeightPrice(weight);
+  return label.length > 8 || /[а-яa-z]/i.test(label);
 }
 
 function getProductMinPrice(product: Product): number {
@@ -149,6 +154,14 @@ async function copyOrderMessage(message: string): Promise<boolean> {
   }
 }
 
+function areProductsEqual(left: Product[], right: Product[]): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function areDeliveryOptionsEqual(left: DeliveryOption[], right: DeliveryOption[]): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export default function App() {
   const telegramUser = WebApp.initDataUnsafe.user;
   const [products, setProducts] = useState<Product[]>([]);
@@ -177,7 +190,7 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showPrepaymentInfo, setShowPrepaymentInfo] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('all');
-  const [priceSort, setPriceSort] = useState<PriceSort>('featured');
+  const [priceSort, setPriceSort] = useState<PriceSort>('none');
   const [homeFeedVersion, setHomeFeedVersion] = useState(0);
   const [loggedCheckoutKey, setLoggedCheckoutKey] = useState<string | null>(null);
   const [isCheckoutPreparing, setIsCheckoutPreparing] = useState(false);
@@ -216,26 +229,46 @@ export default function App() {
 
     let isMounted = true;
 
+    const applyCriticalData = (productsData: Product[], deliveryData: DeliveryOption[]) => {
+      if (!isMounted) return;
+
+      setProducts((current) => areProductsEqual(current, productsData) ? current : productsData);
+      setHomeFeedVersion((value) => value + 1);
+      setDeliveryOptions((current) => areDeliveryOptionsEqual(current, deliveryData) ? current : deliveryData);
+
+      if (deliveryData.length > 0) {
+        setSelectedDeliveryId((current) => {
+          if (current && deliveryData.some((option) => option.id === current)) {
+            return current;
+          }
+
+          return deliveryData[0].id;
+        });
+      }
+    };
+
+    const refreshCatalogData = async (forceFresh = false) => {
+      const [productsData, deliveryData] = await Promise.all([
+        fetchProducts(forceFresh ? { forceFresh: true } : undefined),
+        fetchDeliveryOptions(forceFresh ? { forceFresh: true } : undefined),
+      ]);
+
+      applyCriticalData(productsData, deliveryData);
+    };
+
     const loadCriticalData = async () => {
       try {
-        const [productsData, deliveryData] = await Promise.all([
-          fetchProducts(),
-          fetchDeliveryOptions(),
-        ]);
-
-        if (!isMounted) return;
-
-        setProducts(productsData);
-        setHomeFeedVersion((value) => value + 1);
-        setDeliveryOptions(deliveryData);
-
-        if (deliveryData.length > 0) {
-          setSelectedDeliveryId((current) => current ?? deliveryData[0].id);
-        }
+        await refreshCatalogData(false);
       } finally {
         if (isMounted) {
           setLoading(false);
         }
+      }
+
+      try {
+        await refreshCatalogData(true);
+      } catch (error) {
+        console.warn('Fresh catalog refresh failed', error);
       }
     };
 
@@ -264,18 +297,36 @@ export default function App() {
   }, [userId]);
 
   useEffect(() => {
-    const refreshLoyaltyOnVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void loadLoyaltyBalance();
-      }
+    const refreshAppDataOnVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+
+      void loadLoyaltyBalance();
+      void fetchProducts({ forceFresh: true }).then((freshProducts) => {
+        setProducts((current) => areProductsEqual(current, freshProducts) ? current : freshProducts);
+        setHomeFeedVersion((value) => value + 1);
+      }).catch((error) => {
+        console.warn('Fresh products refresh failed', error);
+      });
+      void fetchDeliveryOptions({ forceFresh: true }).then((freshDelivery) => {
+        setDeliveryOptions((current) => areDeliveryOptionsEqual(current, freshDelivery) ? current : freshDelivery);
+        setSelectedDeliveryId((current) => {
+          if (current && freshDelivery.some((option) => option.id === current)) {
+            return current;
+          }
+
+          return freshDelivery[0]?.id ?? current ?? null;
+        });
+      }).catch((error) => {
+        console.warn('Fresh delivery refresh failed', error);
+      });
     };
 
-    document.addEventListener('visibilitychange', refreshLoyaltyOnVisible);
-    window.addEventListener('focus', refreshLoyaltyOnVisible);
+    document.addEventListener('visibilitychange', refreshAppDataOnVisible);
+    window.addEventListener('focus', refreshAppDataOnVisible);
 
     return () => {
-      document.removeEventListener('visibilitychange', refreshLoyaltyOnVisible);
-      window.removeEventListener('focus', refreshLoyaltyOnVisible);
+      document.removeEventListener('visibilitychange', refreshAppDataOnVisible);
+      window.removeEventListener('focus', refreshAppDataOnVisible);
     };
   }, [userId]);
 
@@ -508,7 +559,7 @@ export default function App() {
   const featuredProducts = useMemo(() => buildFeaturedFeed(products), [products, homeFeedVersion]);
 
   const filteredProducts = useMemo(() => {
-    const source = priceSort === 'featured' ? featuredProducts : [...products].sort((left, right) => {
+    const source = priceSort === 'none' ? featuredProducts : [...products].sort((left, right) => {
       const leftPrice = getProductMinPrice(left);
       const rightPrice = getProductMinPrice(right);
       return priceSort === 'asc' ? leftPrice - rightPrice : rightPrice - leftPrice;
@@ -673,9 +724,8 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-start gap-2">
-          <div className="scrollbar-hide min-w-0 flex-1 overflow-x-auto pb-1">
-            <div className="flex gap-2 pr-2">
+        <div className="scrollbar-hide -mx-1 overflow-x-auto pb-1">
+          <div className="flex min-w-max gap-2 px-1">
               {CATEGORY_ORDER.map((category) => {
                 const isActive = selectedCategory === category;
                 return (
@@ -701,23 +751,24 @@ export default function App() {
                   </button>
                 );
               })}
-            </div>
+            <button
+              onClick={() => {
+                setPriceSort((current) => {
+                  if (current === 'none') return 'desc';
+                  if (current === 'desc') return 'asc';
+                  return 'none';
+                });
+              }}
+              className={cn(
+                "glass-chip flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all",
+                priceSort === 'none'
+                  ? "border border-white/10 bg-white/[0.03] text-white/56"
+                  : "border border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f] shadow-[0_0_24px_rgba(219,255,79,0.14)]"
+              )}
+            >
+              <span>{priceSort === 'desc' ? 'Цена ↓' : priceSort === 'asc' ? 'Цена ↑' : 'Цена'}</span>
+            </button>
           </div>
-
-          <button
-            onClick={() => {
-              setPriceSort((current) => {
-                if (current === 'featured') return 'desc';
-                if (current === 'desc') return 'asc';
-                return 'featured';
-              });
-            }}
-            className="glass-chip flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/72"
-          >
-            <span>
-              {priceSort === 'featured' ? 'Выгодно' : priceSort === 'desc' ? 'Цена ↓' : 'Цена ↑'}
-            </span>
-          </button>
         </div>
       </section>
 
@@ -1383,6 +1434,7 @@ const ProductCard: React.FC<{
   const hasMultipleWeights = product.weights.length > 1;
   const currentCartItem = cart.find((item) => item.id === product.id && item.selectedWeight.weight === selectedWeight.weight);
   const currentQuantity = currentCartItem?.quantity || 0;
+  const hasExtendedPrice = isExtendedPriceLabel(selectedWeight);
 
   return (
     <motion.div 
@@ -1420,19 +1472,29 @@ const ProductCard: React.FC<{
         )}
 
         <div className={cn("mt-auto flex flex-col gap-3", !hasMultipleWeights && "pt-2")}>
-          <div className="flex items-end justify-between gap-2">
+          <div className={cn("grid items-end gap-3", currentQuantity === 0 ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1")}>
             <div className="min-w-0 flex flex-col">
-              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">Цена</span>
-              <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{formatWeightPrice(selectedWeight)}</span>
-            </div>
-            {currentQuantity === 0 && (
+            <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">Цена</span>
+            <span
+              className={cn(
+                "font-display uppercase tracking-[0.02em] text-[#dbff4f] break-words",
+                hasExtendedPrice ? "max-w-[8.4rem] text-[1.45rem] leading-[0.92]" : "text-[2rem] leading-[0.9]"
+              )}
+            >
+              {formatWeightPrice(selectedWeight)}
+            </span>
+          </div>
+
+          {currentQuantity === 0 ? (
               <button 
                 onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
-                className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
+                className="liquid-button h-10 w-10 shrink-0 self-end rounded-[20px] p-0 active:scale-90"
               >
                 <Plus size={17} />
               </button>
-            )}
+          ) : (
+            <></>
+          )}
           </div>
 
           {currentQuantity > 0 && (

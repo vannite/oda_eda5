@@ -11,6 +11,10 @@ const PRODUCTS_CACHE_KEY = 'oda_products_cache_v1';
 const DELIVERY_CACHE_KEY = 'oda_delivery_cache_v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+type FetchOptions = {
+  forceFresh?: boolean;
+};
+
 const OFFICE_DELIVERY_TIERS: DeliveryTier[] = [
   { price: 100, condition: '0-1 товар', minItems: 0, maxItems: 1 },
   { price: 75, condition: '2 товара', minItems: 2, maxItems: 2 },
@@ -136,8 +140,11 @@ function normalizePriceLabel(value: string, fallbackPrice: number): string {
   return `${trimmed}р`;
 }
 
-export async function fetchProducts(): Promise<Product[]> {
-  const cachedProducts = readCache<Product[]>(PRODUCTS_CACHE_KEY, CACHE_TTL_MS);
+export async function fetchProducts(options: FetchOptions = {}): Promise<Product[]> {
+  const cachedProducts = !options.forceFresh
+    ? readCache<Product[]>(PRODUCTS_CACHE_KEY, CACHE_TTL_MS)
+    : null;
+
   if (cachedProducts) {
     return cachedProducts;
   }
@@ -188,8 +195,11 @@ export async function fetchProducts(): Promise<Product[]> {
   }
 }
 
-export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
-  const cachedDelivery = readCache<DeliveryOption[]>(DELIVERY_CACHE_KEY, CACHE_TTL_MS);
+export async function fetchDeliveryOptions(options: FetchOptions = {}): Promise<DeliveryOption[]> {
+  const cachedDelivery = !options.forceFresh
+    ? readCache<DeliveryOption[]>(DELIVERY_CACHE_KEY, CACHE_TTL_MS)
+    : null;
+
   if (cachedDelivery) {
     return cachedDelivery;
   }
