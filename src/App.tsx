@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { startTransition, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, ChevronRight, Minus, Plus, X, Truck, Store, Info, Star, Zap } from 'lucide-react';
@@ -14,6 +14,42 @@ import { twMerge } from 'tailwind-merge';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+const CATEGORY_ORDER = ['all', 'мясо', 'сыры', 'оливки', 'орехи', 'снеки', 'другое'] as const;
+
+type CategoryKey = typeof CATEGORY_ORDER[number];
+
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  all: 'Все',
+  мясо: 'Мясо',
+  сыры: 'Сыры',
+  оливки: 'Оливки',
+  орехи: 'Орехи',
+  снеки: 'Снеки',
+  другое: 'Другое',
+};
+
+const CATEGORY_KEYWORDS: Record<Exclude<CategoryKey, 'all'>, string[]> = {
+  мясо: ['хамон', 'салями', 'колбас', 'прошутто', 'бекон', 'мяс', 'серрано', 'чоризо', 'пастрами', 'пепперони'],
+  сыры: ['сыр', 'пармиджано', 'пармезан', 'бри', 'камамбер', 'чеддер', 'горгонзола', 'гауда', 'моцарелла', 'пекорино'],
+  оливки: ['олив', 'маслин', 'тапенад'],
+  орехи: ['орех', 'миндаль', 'фисташ', 'кешью', 'пекан', 'фундук', 'грецк'],
+  снеки: ['чипс', 'снек', 'крекер', 'палочк', 'сухар', 'начос'],
+  другое: [],
+};
+
+function getProductCategory(product: Product): Exclude<CategoryKey, 'all'> {
+  const haystack = `${product.name} ${product.description || ''}`.toLowerCase();
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as Array<[Exclude<CategoryKey, 'all'>, string[]]>) {
+    if (category === 'другое') continue;
+    if (keywords.some((keyword) => haystack.includes(keyword))) {
+      return category;
+    }
+  }
+
+  return 'другое';
 }
 
 export default function App() {
@@ -42,6 +78,7 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showPrepaymentInfo, setShowPrepaymentInfo] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('all');
 
   const userId = WebApp.initDataUnsafe.user?.id?.toString() || 'guest';
 
@@ -211,10 +248,22 @@ export default function App() {
   };
 
   const openProduct = (product: Product) => {
-    startTransition(() => {
-      setSelectedProduct(product);
-    });
+    setSelectedProduct(product);
   };
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'all') return products;
+    return products.filter((product) => getProductCategory(product) === selectedCategory);
+  }, [products, selectedCategory]);
+
+  const categoryCounts = useMemo(() => {
+    return CATEGORY_ORDER.reduce<Record<CategoryKey, number>>((acc, category) => {
+      acc[category] = category === 'all'
+        ? products.length
+        : products.filter((product) => getProductCategory(product) === category).length;
+      return acc;
+    }, { all: 0, мясо: 0, сыры: 0, оливки: 0, орехи: 0, снеки: 0, другое: 0 });
+  }, [products]);
 
   const confirmCheckout = () => {
     const itemsText = cart.map(item => 
@@ -290,21 +339,21 @@ export default function App() {
       <div className="relative mx-auto max-w-[480px] pb-28">
       {/* Header */}
       <header className="glass-panel sticky top-3 z-40 mx-4 mt-3 flex items-center justify-between rounded-[28px] px-4 py-3">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsProfileOpen(true)}
-            className="glass-chip relative flex h-11 w-11 items-center justify-center rounded-full text-[#dbff4f]"
-          >
+        <button 
+          onClick={() => setIsProfileOpen(true)}
+          className="flex min-w-0 items-center gap-3 text-left"
+        >
+          <div className="glass-chip relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#dbff4f]">
             <Star size={20} fill={loyaltyPoints > 0 ? "currentColor" : "none"} />
             {loyaltyPoints > 0 && (
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-[#7bffc7] border-2 border-[#090b14]" />
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#090b14] bg-[#7bffc7]" />
             )}
-          </button>
-          <div className="flex flex-col">
+          </div>
+          <div className="min-w-0">
             <h1 className="font-display text-[1.25rem] uppercase tracking-[0.12em] text-white">ODA EDA</h1>
             <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-white/40">Premium Food</p>
           </div>
-        </div>
+        </button>
         <button 
           onClick={() => setIsCartOpen(true)}
           className="glass-chip relative flex h-11 w-11 items-center justify-center rounded-full"
@@ -318,16 +367,71 @@ export default function App() {
         </button>
       </header>
 
+      <section className="space-y-3 px-4 pt-4">
+        <div className="glass-panel overflow-hidden rounded-[28px] px-4 py-4">
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top,rgba(219,255,79,0.14),transparent_62%)]" />
+          <div className="relative space-y-3">
+            <p className="section-kicker">Curated selection</p>
+            <div className="space-y-2">
+              <h2 className="max-w-[18rem] font-display text-[1.3rem] uppercase leading-[0.94] tracking-[0.07em] text-white">
+                Редкие деликатесы без случайной наценки
+              </h2>
+              <p className="max-w-[22rem] text-[12px] leading-relaxed text-white/62">
+                Здесь удобно собрать и редкие позиции, которые бывает сложно найти в обычных магазинах: от выдержанных сыров и мясных деликатесов до аккуратных закусок по вменяемой цене.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 pb-1">
+          <div className="flex gap-2">
+            {CATEGORY_ORDER.map((category) => {
+              const isActive = selectedCategory === category;
+              return (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all",
+                    isActive
+                      ? "border-[#dbff4f] bg-[rgba(219,255,79,0.18)] text-[#dbff4f] shadow-[0_0_24px_rgba(219,255,79,0.14)]"
+                      : "border-white/10 bg-white/[0.03] text-white/56"
+                  )}
+                >
+                  <span>{CATEGORY_LABELS[category]}</span>
+                  <span className={cn("text-[10px]", isActive ? "text-[#dbff4f]/90" : "text-white/32")}>
+                    {categoryCounts[category]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Product List */}
-      <main className="grid grid-cols-2 gap-2 px-4 py-4 pb-10">
-        {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
-            onAdd={addToCart} 
-            onClick={() => openProduct(product)}
-          />
-        ))}
+      <main className="px-4 py-4 pb-10">
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            {filteredProducts.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onAdd={addToCart} 
+                onRemove={removeFromCart}
+                onClick={() => openProduct(product)}
+                cart={cart}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass-panel rounded-[28px] px-5 py-8 text-center">
+            <p className="section-kicker">Nothing here yet</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/56">
+              В этой категории пока нет позиций. Попробуй соседний раздел или вернись ко всему меню.
+            </p>
+          </div>
+        )}
       </main>
 
       {/* Terms Button */}
@@ -364,44 +468,46 @@ export default function App() {
               onClick={() => setSelectedProduct(null)}
               className="fixed inset-0 bg-black/78 z-[60]"
             />
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="fixed bottom-0 inset-x-0 z-[61] mx-auto flex max-h-[88vh] max-w-[480px] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#0b1020]/96 shadow-[0_-20px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
-            >
-              <div className="relative h-64 shrink-0">
-                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" decoding="async" />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.72))]" />
-                <button 
-                  onClick={() => setSelectedProduct(null)}
-                  className="glass-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-white"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="scrollbar-hide flex-1 overflow-y-auto p-5">
-                <div className="space-y-4">
-                  <div>
-                    <p className="section-kicker">Product detail</p>
-                    <h2 className="mt-2 font-display text-[1.8rem] uppercase leading-[0.92] tracking-[0.06em] text-white">{selectedProduct.name}</h2>
-                  </div>
-                <div className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
-                  {selectedProduct.description || "Описание скоро появится..."}
+            <div className="fixed inset-x-0 bottom-0 z-[61] flex justify-center px-3 pb-3">
+              <motion.div 
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: "spring", damping: 26, stiffness: 220 }}
+                className="flex max-h-[88vh] w-full max-w-[480px] flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[#0b1020]/96 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+              >
+                <div className="relative h-64 shrink-0">
+                  <img src={selectedProduct.image} alt={selectedProduct.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" decoding="async" />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,11,20,0.08),rgba(9,11,20,0.72))]" />
+                  <button 
+                    onClick={() => setSelectedProduct(null)}
+                    className="glass-chip absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-white"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-                <div className="pt-4 border-t border-white/5">
+                <div className="scrollbar-hide flex-1 overflow-y-auto p-5">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="section-kicker">Product detail</p>
+                      <h2 className="mt-2 font-display text-[1.65rem] uppercase leading-[0.92] tracking-[0.06em] text-white">{selectedProduct.name}</h2>
+                    </div>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-white/60">
+                      {selectedProduct.description || "Описание скоро появится..."}
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-white/8 p-5">
                   <ProductWeightSelector 
-                    product={selectedProduct} 
+                    product={selectedProduct}
                     onAdd={(p, w) => {
                       addToCart(p, w);
                       setSelectedProduct(null);
-                    }} 
+                    }}
                   />
                 </div>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
@@ -427,7 +533,7 @@ export default function App() {
               <div className="soft-divider flex items-start justify-between gap-4 p-5">
                 <div className="min-w-0 flex-1">
                   <p className="section-kicker">Checkout</p>
-                  <h2 className="font-display text-[1.55rem] uppercase leading-[0.95] tracking-[0.07em] text-white">Оформление заказа</h2>
+                  <h2 className="font-display text-[1.35rem] uppercase leading-[1] tracking-[0.04em] text-white">Оформление заказа</h2>
                 </div>
                 <button onClick={() => setIsCartOpen(false)} className="glass-chip flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                   <X size={20} />
@@ -486,7 +592,9 @@ export default function App() {
                               {option.type === 'pickup' ? <Store size={18} /> : <Truck size={18} />}
                               <span className="font-display text-lg uppercase tracking-[0.06em] text-[#dbff4f]">{totalItems > 0 ? getDeliveryCostForOption(option) : option.price}р</span>
                             </div>
-                            <span className="max-w-full break-words text-[0.94rem] font-semibold uppercase leading-[1.08] tracking-[0.02em] text-white">{option.name}</span>
+                              <span className="max-w-full whitespace-normal break-normal text-[0.9rem] font-semibold leading-[1.1] tracking-0 text-white [hyphens:none] [overflow-wrap:normal] [word-break:normal]">
+                                {option.name}
+                              </span>
                             {getDeliveryConditionLabel(option) && (
                               <span className="text-[10px] text-white/40 leading-tight">{getDeliveryConditionLabel(option)}</span>
                             )}
@@ -736,56 +844,61 @@ export default function App() {
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-[70]"
             />
             <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              className="glass-panel fixed bottom-0 inset-x-0 z-[70] mx-auto max-w-[480px] space-y-6 rounded-t-[32px] p-6"
+              initial={{ scale: 0.94, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 16 }}
+              className="fixed inset-x-4 top-[12vh] z-[70] mx-auto w-auto max-w-[420px]"
             >
-              <div className="flex justify-between items-center">
-                <h2 className="font-display text-[1.55rem] uppercase tracking-[0.08em] text-white">Профиль лояльности</h2>
-                <button onClick={() => setIsProfileOpen(false)} className="glass-chip flex h-10 w-10 items-center justify-center rounded-full"><X size={20} /></button>
-              </div>
-
-              <div className="glass-panel rounded-3xl p-8 text-center space-y-4">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle,rgba(219,255,79,0.32),rgba(219,255,79,0.08)_55%,transparent_70%)] text-[#dbff4f]">
-                  <Star size={40} fill="white" className="text-white" />
-                </div>
-                <div>
-                  <p className="font-display text-4xl uppercase tracking-[0.08em] text-white">{loyaltyPoints}</p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-white/40">Доступных баллов</p>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <p className="text-[10px] text-white/20 uppercase tracking-widest font-medium">
-                  Версия: 1.0.5 (Обновлено: 14.03 23:20)
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">Как это работает?</h3>
-                <div className="grid gap-3">
-                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">3%</div>
-                    <p className="text-xs text-white/60">Получайте 3% баллами с каждой подтвержденной покупки</p>
+              <div className="glass-panel max-h-[76vh] space-y-6 overflow-y-auto rounded-[32px] border border-white/12 bg-[#101524]/94 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="section-kicker">Loyalty profile</p>
+                    <h2 className="font-display text-[1.45rem] uppercase tracking-[0.08em] text-white">Профиль лояльности</h2>
                   </div>
-                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">15%</div>
-                    <p className="text-xs text-white/60">Оплачивайте до 15% от суммы заказа накопленными баллами</p>
+                  <button onClick={() => setIsProfileOpen(false)} className="glass-chip flex h-10 w-10 shrink-0 items-center justify-center rounded-full"><X size={20} /></button>
+                </div>
+
+                <div className="glass-panel rounded-3xl p-8 text-center space-y-4">
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle,rgba(219,255,79,0.32),rgba(219,255,79,0.08)_55%,transparent_70%)] text-[#dbff4f]">
+                    <Star size={40} fill="white" className="text-white" />
                   </div>
-                  <div className="glass-panel rounded-[24px] p-4 flex gap-4 items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(255,178,79,0.14)] text-[#ffb24f] font-bold">3м</div>
-                    <p className="text-xs text-white/60">Баллы действительны в течение 3 месяцев с момента начисления</p>
+                  <div>
+                    <p className="font-display text-4xl uppercase tracking-[0.08em] text-white">{loyaltyPoints}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-white/40">Доступных баллов</p>
                   </div>
                 </div>
-              </div>
 
-              <button 
-                onClick={() => setIsProfileOpen(false)}
-                className="liquid-button w-full py-4 rounded-2xl font-bold"
-              >
-                Понятно
-              </button>
+                <div className="text-center">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-white/20">
+                    Версия: 1.0.5 (Обновлено: 14.03 23:20)
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">Как это работает?</h3>
+                  <div className="grid gap-3">
+                    <div className="glass-panel flex items-center gap-4 rounded-[24px] p-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">3%</div>
+                      <p className="text-xs text-white/60">Получайте 3% баллами с каждой подтвержденной покупки</p>
+                    </div>
+                    <div className="glass-panel flex items-center gap-4 rounded-[24px] p-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(123,255,199,0.14)] text-[#7bffc7] font-bold">15%</div>
+                      <p className="text-xs text-white/60">Оплачивайте до 15% от суммы заказа накопленными баллами</p>
+                    </div>
+                    <div className="glass-panel flex items-center gap-4 rounded-[24px] p-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(255,178,79,0.14)] text-[#ffb24f] font-bold">3м</div>
+                      <p className="text-xs text-white/60">Баллы действительны в течение 3 месяцев с момента начисления</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsProfileOpen(false)}
+                  className="liquid-button w-full rounded-2xl py-4 font-bold"
+                >
+                  Понятно
+                </button>
+              </div>
             </motion.div>
           </>
         )}
@@ -855,10 +968,18 @@ export default function App() {
   );
 }
 
-const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWeight) => void; onClick: () => void }> = ({ product, onAdd, onClick }) => {
+const ProductCard: React.FC<{
+  product: Product;
+  cart: CartItem[];
+  onAdd: (p: Product, w: ProductWeight) => void;
+  onRemove: (productId: string, weight: string) => void;
+  onClick: () => void;
+}> = ({ product, cart, onAdd, onRemove, onClick }) => {
   const [selectedWeightIdx, setSelectedWeightIdx] = useState(0);
   const selectedWeight = product.weights[selectedWeightIdx];
   const hasMultipleWeights = product.weights.length > 1;
+  const currentCartItem = cart.find((item) => item.id === product.id && item.selectedWeight.weight === selectedWeight.weight);
+  const currentQuantity = currentCartItem?.quantity || 0;
 
   return (
     <motion.div 
@@ -900,12 +1021,38 @@ const ProductCard: React.FC<{ product: Product; onAdd: (p: Product, w: ProductWe
             <span className="text-[10px] text-white/40 font-medium uppercase tracking-[0.18em]">Цена</span>
             <span className="font-display text-[2rem] leading-none uppercase tracking-[0.02em] text-[#dbff4f]">{selectedWeight.price}р</span>
           </div>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
-            className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
-          >
-            <Plus size={17} />
-          </button>
+          {currentQuantity > 0 ? (
+            <div className="flex h-11 shrink-0 items-center rounded-full bg-[#ff2b2b] px-1.5 text-white shadow-[0_12px_30px_rgba(255,43,43,0.28)]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(product.id, selectedWeight.weight);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/92"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="min-w-[3.5rem] px-2 text-center text-[0.95rem] font-bold">
+                {currentQuantity} шт
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdd(product, selectedWeight);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/92"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onAdd(product, selectedWeight); }}
+              className="liquid-button h-10 w-10 shrink-0 rounded-[20px] p-0 active:scale-90"
+            >
+              <Plus size={17} />
+            </button>
+          )}
         </div>
       </div>
     </motion.div>
