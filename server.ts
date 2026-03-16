@@ -6,7 +6,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SHEET_ID = "1oXwz2zznkpY10M5GumIET6E96TjEEMd3jISM4FUy2f0";
-const GOOGLE_SHEETS_WEBHOOK_URL = process.env.GOOGLE_SHEETS_WEBHOOK_URL || "";
+const DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyU5lIGyxiXcE8fTb1RPJs9xKyBAJhUeI5GLtNPXm36m8HQiLo12TpB2Nab7qKnf7gW/exec";
+const GOOGLE_SHEETS_WEBHOOK_URL = process.env.GOOGLE_SHEETS_WEBHOOK_URL || DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL;
 
 const SHEET_URLS = {
   products: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`,

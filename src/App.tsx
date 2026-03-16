@@ -87,6 +87,18 @@ function buildFeaturedFeed(products: Product[]): Product[] {
   return ordered;
 }
 
+async function copyOrderMessage(message: string): Promise<boolean> {
+  if (!navigator.clipboard?.writeText) return false;
+
+  try {
+    await navigator.clipboard.writeText(message);
+    return true;
+  } catch (error) {
+    console.warn('Failed to copy order message to clipboard', error);
+    return false;
+  }
+}
+
 export default function App() {
   const telegramUser = WebApp.initDataUnsafe.user;
   const [products, setProducts] = useState<Product[]>([]);
@@ -351,7 +363,11 @@ export default function App() {
     
     const encodedMessage = encodeURIComponent(message.replace(/\n/g, '\r\n'));
     const ownerUsername = 'bd77797';
-    const url = `https://t.me/${ownerUsername}?text=${encodedMessage}`;
+    const directChatUrl = `https://t.me/${ownerUsername}`;
+    const bestEffortTextUrl = `https://t.me/${ownerUsername}?text=${encodedMessage}`;
+    const copiedToClipboard = await copyOrderMessage(message);
+
+    localStorage.setItem(`last_order_message_${userId}`, message);
 
     const orderPayload: OrderLogPayload = {
       orderId: `ODA-${userId}-${Date.now()}`,
@@ -377,10 +393,22 @@ export default function App() {
       comment: 'Order created from Telegram Mini App',
     };
 
+    let orderLogSaved = false;
+
     try {
       await submitOrderLog(orderPayload);
+      orderLogSaved = true;
     } catch (error) {
       console.warn('Order log was not saved to Google Sheets', error);
+      try {
+        const pendingOrders = JSON.parse(localStorage.getItem(`pending_order_logs_${userId}`) || '[]');
+        localStorage.setItem(`pending_order_logs_${userId}`, JSON.stringify([
+          ...(Array.isArray(pendingOrders) ? pendingOrders : []),
+          orderPayload,
+        ]));
+      } catch (storageError) {
+        console.warn('Failed to store pending order log locally', storageError);
+      }
     }
     
     // Mark promo as used
@@ -389,8 +417,27 @@ export default function App() {
       localStorage.setItem(`used_promos_${userId}`, JSON.stringify([...usedPromos, appliedPromo.code]));
     }
 
-    WebApp.openTelegramLink(url);
+    WebApp.openTelegramLink(bestEffortTextUrl);
     setShowPrepaymentInfo(false);
+
+    if (!copiedToClipboard) {
+      localStorage.setItem(`last_order_message_${userId}`, message);
+    }
+
+    if (!orderLogSaved) {
+      console.warn('Order was not recorded in Google Sheets. Check /api/orders deployment and webhook configuration.');
+    }
+
+    if (copiedToClipboard) {
+      setTimeout(() => {
+        WebApp.showAlert('Чат откроется с заказом. Если текст не подставится автоматически, он уже скопирован и его можно просто вставить.');
+      }, 250);
+      return;
+    }
+
+    setTimeout(() => {
+      WebApp.showAlert(`Если текст заказа не подставился автоматически, открой чат @${ownerUsername} и вставь сообщение вручную.`);
+    }, 250);
   };
 
   if (loading) {
@@ -691,16 +738,7 @@ export default function App() {
                         {deliveryOptions.map((option) => (
                             <button 
                               key={option.id}
-                              onClick={() => {
-                                setSelectedDeliveryId(option.id);
-                                if (option.name === 'Тверская, 22') {
-                                  if (navigator.clipboard?.writeText) {
-                                    void navigator.clipboard.writeText('Тверская, 22').catch(() => undefined);
-                                  }
-                                  WebApp.HapticFeedback.notificationOccurred('success');
-                                  WebApp.showAlert('Адрес Тверская, 22 скопирован');
-                                }
-                              }}
+                              onClick={() => setSelectedDeliveryId(option.id)}
                               className={cn(
                                 "glass-panel relative flex min-h-[138px] flex-col items-start justify-between gap-2 overflow-hidden rounded-[24px] p-4 text-left transition-all",
                                 selectedDeliveryId === option.id ? "ring-1 ring-[#dbff4f] shadow-[0_0_40px_rgba(219,255,79,0.18)]" : ""
@@ -915,6 +953,18 @@ export default function App() {
                       </p>
                       <p className="text-xs text-white/40 italic">
                         Пример: заказали во вторник — забираете на следующей неделе в Пн-Вт.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-300">Самовывоз</h3>
+                    <div className="glass-panel rounded-[22px] p-4 space-y-2">
+                      <p className="text-sm leading-relaxed text-white/80">
+                        Бесплатно по <span className="text-white font-bold">будням после 22:00</span> у метро <span className="text-white font-bold">Бульвар Рокоссовского</span>.
+                      </p>
+                      <p className="text-xs italic text-white/40">
+                        Точное место и время подтверждаются в личном чате после оформления.
                       </p>
                     </div>
                   </section>

@@ -144,6 +144,13 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
         tiers: OFFICE_DELIVERY_TIERS
       },
       {
+        id: 'pickup-rokossovskogo',
+        name: 'Самовывоз',
+        price: 0,
+        type: 'pickup',
+        condition: 'По будням после 22:00 • м. Бульвар Рокоссовского'
+      },
+      {
         id: 'delivery-indiv',
         name: 'Индивидуальная',
         price: individualPrice,
@@ -161,6 +168,13 @@ export async function fetchDeliveryOptions(): Promise<DeliveryOption[]> {
         type: 'delivery',
         condition: '0-1 товар: 100р | 2 товара: 75р | 3-4 товара: 50р | от 5 товаров: 0р',
         tiers: OFFICE_DELIVERY_TIERS
+      },
+      {
+        id: 'default-pickup',
+        name: 'Самовывоз',
+        price: 0,
+        type: 'pickup',
+        condition: 'По будням после 22:00 • м. Бульвар Рокоссовского'
       },
       { id: 'default-indiv', name: 'Индивидуальная', price: 150, type: 'delivery', condition: 'от 500р' }
     ];
@@ -275,8 +289,26 @@ export async function submitOrderLog(payload: OrderLogPayload): Promise<void> {
     body: JSON.stringify(payload),
   });
 
+  const contentType = response.headers.get('content-type') || '';
+  const responseText = await response.text().catch(() => '');
+
   if (!response.ok) {
-    const message = await response.text().catch(() => '');
-    throw new Error(message || `Order log request failed with ${response.status}`);
+    throw new Error(responseText || `Order log request failed with ${response.status}`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    throw new Error('Order log endpoint returned a non-JSON response');
+  }
+
+  let parsed: any = null;
+
+  try {
+    parsed = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error('Order log endpoint returned invalid JSON');
+  }
+
+  if (!parsed?.ok) {
+    throw new Error(parsed?.error || 'Order log endpoint did not confirm save');
   }
 }

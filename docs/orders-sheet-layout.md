@@ -18,3 +18,10 @@ order_id,user_id,username,first_name,last_name,created_at,status,payment_status,
 - Mini App пишет строку в этот лист в момент нажатия `Понятно, заказать`
 - Ты вручную меняешь `payment_status` на `paid` и при необходимости заполняешь `paid_at`
 - Личный кабинет считает баллы только по строкам со статусом оплаты `paid`
+
+Подключение записи:
+
+- Для записи из Mini App нужен webhook, который реально добавляет строки в Google Sheets
+- Готовая заготовка Apps Script лежит в [google-sheets-orders-webhook.gs](/Users/bokovdenis/Downloads/oda-eda%20(5)/docs/google-sheets-orders-webhook.gs)
+- После публикации этого Apps Script как Web App его URL нужно положить в переменную окружения `GOOGLE_SHEETS_WEBHOOK_URL`
+- Если приложение задеплоено как статика без backend/webhook, лист будет оставаться пустым, даже если кнопка `заказать` нажимается
