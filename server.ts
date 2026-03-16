@@ -97,6 +97,44 @@ async function startServer() {
     }
   });
 
+  app.post("/api/feedback", async (req, res) => {
+    if (!GOOGLE_SHEETS_WEBHOOK_URL) {
+      res.status(501).json({
+        error: "Feedback logging webhook is not configured",
+        requiredEnv: "GOOGLE_SHEETS_WEBHOOK_URL",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const text = await response.text();
+
+      if (!response.ok) {
+        res.status(502).json({
+          error: "Failed to write feedback to Google Sheets",
+          details: text,
+        });
+        return;
+      }
+
+      res.status(200).json({
+        ok: true,
+        upstream: text,
+      });
+    } catch (error) {
+      console.error("Feedback logging failed:", error);
+      res.status(502).json({ error: "Feedback logging failed" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

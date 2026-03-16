@@ -47,6 +47,7 @@ export interface LoyaltyRecord {
 }
 
 export interface OrderLogPayload {
+  entryType?: 'order';
   orderId: string;
   userId: string;
   username: string;
@@ -68,4 +69,16 @@ export interface OrderLogPayload {
   priorityFee: number;
   priorityEnabled: boolean;
   comment: string;
+}
+
+export interface FeedbackPayload {
+  entryType: 'feedback';
+  feedbackId: string;
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+  subject: string;
+  message: string;
 }

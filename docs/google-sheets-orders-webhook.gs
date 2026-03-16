@@ -2,6 +2,7 @@ const SPREADSHEET_ID = '1oXwz2zznkpY10M5GumIET6E96TjEEMd3jISM4FUy2f0';
 const TARGET_SHEET_GID = 1831701351;
 const ECONOMICS_SHEET_NAME = 'Экономика';
 const CUSTOMERS_SHEET_NAME = 'Покупатели';
+const FEEDBACK_SHEET_NAME = 'Отзывы';
 
 const ORDER_HEADERS = [
   'order_id',
@@ -36,6 +37,7 @@ function doGet() {
   ensureOrdersHeader_(ordersSheet);
   syncEconomicsSheet_(spreadsheet, ordersSheet);
   syncCustomersSheet_(spreadsheet, ordersSheet);
+  ensureFeedbackSheet_(spreadsheet);
 
   return jsonResponse_({ ok: true, mode: 'GET', message: 'Orders webhook is alive' });
 }
@@ -44,6 +46,12 @@ function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents || '{}');
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    if (payload.entryType === 'feedback') {
+      appendFeedback_(spreadsheet, payload);
+      return jsonResponse_({ ok: true });
+    }
+
     const ordersSheet = getOrdersSheet_(spreadsheet);
 
     ensureOrdersHeader_(ordersSheet);
@@ -248,6 +256,35 @@ function syncCustomersSheet_(spreadsheet, ordersSheet) {
   }
 
   customersSheet.autoResizeColumns(1, 6);
+}
+
+function ensureFeedbackSheet_(spreadsheet) {
+  const feedbackSheet = spreadsheet.getSheetByName(FEEDBACK_SHEET_NAME) || spreadsheet.insertSheet(FEEDBACK_SHEET_NAME);
+  const headers = ['feedback_id', 'user_id', 'username', 'first_name', 'last_name', 'created_at', 'subject', 'message'];
+  const currentHeader = feedbackSheet.getRange(1, 1, 1, headers.length).getValues()[0].map((value) => String(value || '').trim());
+
+  if (currentHeader.join('|') !== headers.join('|')) {
+    feedbackSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
+  feedbackSheet.setFrozenRows(1);
+  feedbackSheet.autoResizeColumns(1, headers.length);
+}
+
+function appendFeedback_(spreadsheet, payload) {
+  const feedbackSheet = spreadsheet.getSheetByName(FEEDBACK_SHEET_NAME) || spreadsheet.insertSheet(FEEDBACK_SHEET_NAME);
+  ensureFeedbackSheet_(spreadsheet);
+
+  feedbackSheet.appendRow([
+    payload.feedbackId || '',
+    payload.userId || '',
+    payload.username || '',
+    payload.firstName || '',
+    payload.lastName || '',
+    payload.createdAt || '',
+    payload.subject || '',
+    payload.message || '',
+  ]);
 }
 
 function columnLetter_(columnNumber) {

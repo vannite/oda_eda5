@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Product, DeliveryOption, DeliveryTier, PromoCode, LoyaltyRecord, OrderLogPayload } from '../types';
+import { Product, DeliveryOption, DeliveryTier, PromoCode, LoyaltyRecord, OrderLogPayload, FeedbackPayload } from '../types';
 
 const SHEET_ID = '1oXwz2zznkpY10M5GumIET6E96TjEEMd3jISM4FUy2f0';
 const PRODUCTS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
@@ -281,7 +281,15 @@ export async function fetchLoyaltyData(): Promise<LoyaltyRecord[]> {
 }
 
 export async function submitOrderLog(payload: OrderLogPayload): Promise<void> {
-  const response = await fetch('/api/orders', {
+  await submitWebhookPayload('/api/orders', payload);
+}
+
+export async function submitFeedbackLog(payload: FeedbackPayload): Promise<void> {
+  await submitWebhookPayload('/api/feedback', payload);
+}
+
+async function submitWebhookPayload(apiPath: string, payload: unknown): Promise<void> {
+  const response = await fetch(apiPath, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

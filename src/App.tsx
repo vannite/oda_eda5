@@ -7,8 +7,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, ChevronRight, Minus, Plus, X, Truck, Store, Info, Star, Zap } from 'lucide-react';
-import { fetchProducts, fetchDeliveryOptions, fetchPromoCodes, fetchLoyaltyData, submitOrderLog } from './services/products';
-import { Product, CartItem, DeliveryOption, ProductWeight, PromoCode, OrderLogPayload } from './types';
+import { fetchProducts, fetchDeliveryOptions, fetchPromoCodes, fetchLoyaltyData, submitOrderLog, submitFeedbackLog } from './services/products';
+import { Product, CartItem, DeliveryOption, ProductWeight, PromoCode, OrderLogPayload, FeedbackPayload } from './types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -129,6 +129,11 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('all');
   const [priceSort, setPriceSort] = useState<PriceSort>('featured');
   const [homeFeedVersion, setHomeFeedVersion] = useState(0);
+  const [loggedCheckoutKey, setLoggedCheckoutKey] = useState<string | null>(null);
+  const [isCheckoutPreparing, setIsCheckoutPreparing] = useState(false);
+  const [feedbackSubject, setFeedbackSubject] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
   const userId = telegramUser?.id?.toString() || 'guest';
 
@@ -291,6 +296,33 @@ export default function App() {
 
   const total = subtotal - promoDiscount - bargainDiscount - loyaltyDiscount + deliveryCost + priorityFee;
 
+  const checkoutSnapshotKey = useMemo(() => JSON.stringify({
+    cart: cart.map((item) => ({
+      id: item.id,
+      weight: item.selectedWeight.weight,
+      price: item.selectedWeight.price,
+      quantity: item.quantity,
+    })),
+    selectedDeliveryId,
+    subtotal,
+    total,
+    promoCode: appliedPromo?.code || '',
+    bargainPercent,
+    customBargain,
+    loyaltyDiscount,
+    isPriority,
+  }), [
+    appliedPromo?.code,
+    bargainPercent,
+    cart,
+    customBargain,
+    isPriority,
+    loyaltyDiscount,
+    selectedDeliveryId,
+    subtotal,
+    total,
+  ]);
+
   const handleApplyPromo = () => {
     const usedPromos = JSON.parse(localStorage.getItem(`used_promos_${userId}`) || '[]');
     if (usedPromos.includes(promoInput)) {
@@ -311,9 +343,65 @@ export default function App() {
     }
   };
 
-  const handleCheckout = () => {
+  const buildOrderPayload = (): OrderLogPayload => {
+    const itemsText = cart.map(item => 
+      `${item.name} (${item.selectedWeight.weight}) x${item.quantity} - ${item.selectedWeight.price * item.quantity}р`
+    ).join('\n');
+
+    return {
+      entryType: 'order',
+      orderId: `ODA-${userId}-${Date.now()}`,
+      userId,
+      username: telegramUser?.username || '',
+      firstName: telegramUser?.first_name || '',
+      lastName: telegramUser?.last_name || '',
+      createdAt: new Date().toISOString(),
+      status: 'checkout_clicked',
+      paymentStatus: 'пендинг',
+      itemsSummary: itemsText,
+      cartSnapshot: JSON.stringify(cart),
+      subtotal,
+      deliveryName: selectedDelivery?.name || '',
+      deliveryCost,
+      total,
+      promoCode: appliedPromo?.code || '',
+      promoDiscount,
+      bargainDiscount,
+      loyaltyDiscount,
+      priorityFee,
+      priorityEnabled: isPriority,
+      comment: 'Order created from Telegram Mini App',
+    };
+  };
+
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
     setShowPrepaymentInfo(true);
+
+    if (loggedCheckoutKey === checkoutSnapshotKey || isCheckoutPreparing) {
+      return;
+    }
+
+    const orderPayload = buildOrderPayload();
+    setIsCheckoutPreparing(true);
+
+    try {
+      await submitOrderLog(orderPayload);
+      setLoggedCheckoutKey(checkoutSnapshotKey);
+    } catch (error) {
+      console.warn('Order log was not saved to Google Sheets', error);
+      try {
+        const pendingOrders = JSON.parse(localStorage.getItem(`pending_order_logs_${userId}`) || '[]');
+        localStorage.setItem(`pending_order_logs_${userId}`, JSON.stringify([
+          ...(Array.isArray(pendingOrders) ? pendingOrders : []),
+          orderPayload,
+        ]));
+      } catch (storageError) {
+        console.warn('Failed to store pending order log locally', storageError);
+      }
+    } finally {
+      setIsCheckoutPreparing(false);
+    }
   };
 
   const openProduct = (product: Product) => {
@@ -363,54 +451,11 @@ export default function App() {
     
     const encodedMessage = encodeURIComponent(message.replace(/\n/g, '\r\n'));
     const ownerUsername = 'bd77797';
-    const directChatUrl = `https://t.me/${ownerUsername}`;
     const bestEffortTextUrl = `https://t.me/${ownerUsername}?text=${encodedMessage}`;
     const copiedToClipboard = await copyOrderMessage(message);
 
     localStorage.setItem(`last_order_message_${userId}`, message);
 
-    const orderPayload: OrderLogPayload = {
-      orderId: `ODA-${userId}-${Date.now()}`,
-      userId,
-      username: telegramUser?.username || '',
-      firstName: telegramUser?.first_name || '',
-      lastName: telegramUser?.last_name || '',
-      createdAt: new Date().toISOString(),
-      status: 'checkout_clicked',
-      paymentStatus: 'пендинг',
-      itemsSummary: itemsText,
-      cartSnapshot: JSON.stringify(cart),
-      subtotal,
-      deliveryName: selectedDelivery?.name || '',
-      deliveryCost,
-      total,
-      promoCode: appliedPromo?.code || '',
-      promoDiscount,
-      bargainDiscount,
-      loyaltyDiscount,
-      priorityFee,
-      priorityEnabled: isPriority,
-      comment: 'Order created from Telegram Mini App',
-    };
-
-    let orderLogSaved = false;
-
-    try {
-      await submitOrderLog(orderPayload);
-      orderLogSaved = true;
-    } catch (error) {
-      console.warn('Order log was not saved to Google Sheets', error);
-      try {
-        const pendingOrders = JSON.parse(localStorage.getItem(`pending_order_logs_${userId}`) || '[]');
-        localStorage.setItem(`pending_order_logs_${userId}`, JSON.stringify([
-          ...(Array.isArray(pendingOrders) ? pendingOrders : []),
-          orderPayload,
-        ]));
-      } catch (storageError) {
-        console.warn('Failed to store pending order log locally', storageError);
-      }
-    }
-    
     // Mark promo as used
     if (appliedPromo) {
       const usedPromos = JSON.parse(localStorage.getItem(`used_promos_${userId}`) || '[]');
@@ -427,13 +472,10 @@ export default function App() {
     setCustomBargain('');
     setIsPriority(false);
     setIsLoyaltyApplied(false);
+    setLoggedCheckoutKey(null);
 
     if (!copiedToClipboard) {
       localStorage.setItem(`last_order_message_${userId}`, message);
-    }
-
-    if (!orderLogSaved) {
-      console.warn('Order was not recorded in Google Sheets. Check /api/orders deployment and webhook configuration.');
     }
 
     if (copiedToClipboard) {
@@ -525,10 +567,10 @@ export default function App() {
             <div className="space-y-2">
               <h2 className="font-display text-[1.42rem] uppercase leading-[1] tracking-[0.05em] text-white">
                 <span className="block">Редкие деликатесы</span>
-                <span className="block">по честной цене</span>
+                <span className="block">без долгих поисков</span>
               </h2>
               <p className="max-w-[21rem] text-[12px] leading-[1.35] text-white/62">
-                Здесь собраны позиции, которые часто сложно найти быстро и в одном месте: выдержанные сыры, мясные деликатесы, оливки, орехи и аккуратные снеки.
+                Здесь собраны позиции, которые обычно приходится искать по разным местам: выдержанные сыры, мясные деликатесы, оливки, орехи и аккуратные снеки.
               </p>
             </div>
           </div>
@@ -608,7 +650,7 @@ export default function App() {
       </main>
 
       {/* Terms Button */}
-      <div className="px-4 pb-32">
+      <div className="space-y-5 px-4 pb-32">
         <button 
           onClick={() => setIsTermsOpen(true)}
           className="glass-panel flex w-full items-center justify-between rounded-[28px] p-4 text-left transition-all"
@@ -628,6 +670,70 @@ export default function App() {
         <p className="mt-5 px-1 text-center text-[11px] leading-relaxed text-white/28">
           Отказ от ответственности: сервис носит информационно-логистический характер. Указанные позиции отображаются для согласования ассортимента и организации доставки; оформление через приложение не является публичной офертой или розничной продажей товаров владельцем сервиса.
         </p>
+
+        <FeedbackForm
+          subject={feedbackSubject}
+          text={feedbackText}
+          isSending={isSendingFeedback}
+          onSubjectChange={setFeedbackSubject}
+          onTextChange={setFeedbackText}
+          onSubmit={async () => {
+            const subject = feedbackSubject.trim();
+            const text = feedbackText.trim();
+
+            if (!subject || !text || isSendingFeedback) {
+              if (!subject || !text) {
+                WebApp.showAlert('Заполни тему и текст отзыва');
+              }
+              return;
+            }
+
+            setIsSendingFeedback(true);
+
+            const feedbackMessage = [
+              'Отзыв ODA EDA',
+              '',
+              `Тема: ${subject}`,
+              `Текст: ${text}`,
+              '',
+              `Пользователь: @${telegramUser?.username || 'без_ника'}`,
+              `ID: ${userId}`,
+            ].join('\n');
+
+            const feedbackPayload: FeedbackPayload = {
+              entryType: 'feedback',
+              feedbackId: `FDB-${userId}-${Date.now()}`,
+              userId,
+              username: telegramUser?.username || '',
+              firstName: telegramUser?.first_name || '',
+              lastName: telegramUser?.last_name || '',
+              createdAt: new Date().toISOString(),
+              subject,
+              message: text,
+            };
+
+            const copied = await copyOrderMessage(feedbackMessage);
+
+            try {
+              await submitFeedbackLog(feedbackPayload);
+            } catch (error) {
+              console.warn('Feedback was not saved to Google Sheets', error);
+            }
+
+            WebApp.openTelegramLink(`https://t.me/bd77797?text=${encodeURIComponent(feedbackMessage.replace(/\n/g, '\r\n'))}`);
+            setFeedbackSubject('');
+            setFeedbackText('');
+            setIsSendingFeedback(false);
+
+            setTimeout(() => {
+              WebApp.showAlert(
+                copied
+                  ? 'Отзыв отправлен. Если текст не подставится автоматически, он уже скопирован.'
+                  : 'Отзыв отправлен. Если текст не подставится автоматически, вставь его в чат вручную.'
+              );
+            }, 250);
+          }}
+        />
       </div>
 
       {/* Product Detail Modal */}
@@ -937,9 +1043,10 @@ export default function App() {
                   </div>
                   <button 
                     onClick={handleCheckout}
-                    className="liquid-button flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold"
+                    disabled={isCheckoutPreparing}
+                    className="liquid-button flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold disabled:opacity-60"
                   >
-                    Оформить заказ
+                    {isCheckoutPreparing ? 'Фиксируем заказ...' : 'Оформить заказ'}
                     <ChevronRight size={20} />
                   </button>
                 </div>
@@ -1291,3 +1398,50 @@ const ProductWeightSelector: React.FC<{ product: Product; onAdd: (p: Product, w:
     </div>
   );
 }
+
+const FeedbackForm: React.FC<{
+  subject: string;
+  text: string;
+  isSending: boolean;
+  onSubjectChange: (value: string) => void;
+  onTextChange: (value: string) => void;
+  onSubmit: () => void | Promise<void>;
+}> = ({ subject, text, isSending, onSubjectChange, onTextChange, onSubmit }) => {
+  return (
+    <section className="glass-panel rounded-[28px] p-4">
+      <div className="space-y-3">
+        <div>
+          <p className="section-kicker">Feedback</p>
+          <h3 className="font-display text-[1.1rem] uppercase tracking-[0.05em] text-white">Обратная связь</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-white/46">
+            Можно оставить отзыв, идею или пожелание по ассортименту. Сообщение уйдёт в личку и сохранится в таблице.
+          </p>
+        </div>
+
+        <input
+          type="text"
+          value={subject}
+          onChange={(event) => onSubjectChange(event.target.value)}
+          placeholder="Тема"
+          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/26 focus:outline-none focus:border-[#dbff4f]/50"
+        />
+
+        <textarea
+          value={text}
+          onChange={(event) => onTextChange(event.target.value)}
+          placeholder="Текст отзыва"
+          rows={4}
+          className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-white/26 focus:outline-none focus:border-[#dbff4f]/50"
+        />
+
+        <button
+          onClick={() => void onSubmit()}
+          disabled={isSending}
+          className="liquid-button w-full rounded-2xl py-4 text-sm font-bold disabled:opacity-60"
+        >
+          {isSending ? 'Отправляем...' : 'Отправить отзыв'}
+        </button>
+      </div>
+    </section>
+  );
+};
